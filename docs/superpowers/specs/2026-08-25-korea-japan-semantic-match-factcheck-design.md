@@ -2,7 +2,8 @@
 
 **Date:** 2026-08-25  
 **Status:** Approved for implementation planning  
-**Project:** job-hunter-agent
+**Project:** job-hunter-agent  
+**日本語版:** [2026-08-25-korea-japan-semantic-match-factcheck-design.ja.md](./2026-08-25-korea-japan-semantic-match-factcheck-design.ja.md)
 
 ## 1. Goal
 

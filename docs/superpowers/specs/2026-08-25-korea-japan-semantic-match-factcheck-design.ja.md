@@ -1,0 +1,214 @@
+# Korea→Japan Job Hunter MVP 設計書
+
+**日付:** 2026-08-25  
+**ステータス:** 実装計画の作成承認済み  
+**プロジェクト:** job-hunter-agent  
+**原文:** [2026-08-25-korea-japan-semantic-match-factcheck-design.md](./2026-08-25-korea-japan-semantic-match-factcheck-design.md)
+
+## 1. 目的
+
+韓国から日本就職を目指す求職者向けに、既存の CrewAI パイプラインへ次を追加する。
+
+- **E — Semantic match:** Vertex embeddings により職務経歴書↔日本の求人を意味的にマッチング
+- **C — Company fact-check:** gBizINFO・法人番号などの公共データ + Grounding により企業信頼性レポートを作成
+
+差別化: Geekly / リクルートエージェントの非公開求人・人間による交渉と正面衝突せず、**根拠のあるマッチング**と**検証可能な企業情報**を求職者自身の成果物として提供する。
+
+## 2. ターゲットユーザー
+
+- Primary: 日本就職を希望する **韓国の求職者**
+- ペルソナ（共通コアで対応。ペルソナ別の深掘りは後続）: 経験者・日本語上/下、新卒・ワーホリ・留学からの就職転換
+- MVP UI 言語: **韓国語**
+- 求人市場の焦点: **Japan**
+
+## 3. アプローチ（確定）
+
+**ハイブリッド:** CrewAI オーケストレーション + Vertex AI（embeddings / Gemini / Grounding）+ 公共法人 API + Streamlit UI。
+
+MVP で採用しないもの:
+
+- UI なしの CLI のみ — Streamlit アップロードを要求済み
+- CrewAI を捨てた Vertex 全面書き換え — リスクが高く E/C 検証が遅れる
+- ハローワーク API を主ソースにする — 利用資格制限あり（§6 参照）
+
+## 4. アーキテクチャ
+
+```
+[Streamlit app]
+  ├─ 韓国語「職務履歴書」テンプレートのダウンロード
+  ├─ 履歴書アップロード（PDF / DOCX / TXT / MD）
+  ├─ 検索条件: level, position, location(=Japan)
+  └─ 実行
+        │
+        ▼
+[resume_ingest] → セッション一時テキスト
+        │
+        ▼
+[job_search_agent] ← Firecrawl（MVP: 公開 Web）
+        │
+        ▼
+[semantic_match] ← Vertex embeddings + Gemini reason_ko + URL Grounding
+        │
+        ▼
+[job_selection] → ChosenJob
+        │
+        ▼
+[company_factcheck] ← 法人番号 / gBizINFO + Gemini + Grounding
+        │
+        ▼
+[Streamlit] ランキング求人 + company_factcheck.md（+ ダウンロード）
+```
+
+**境界**
+
+| レイヤー | 責任 |
+|----------|------|
+| Streamlit | テンプレ DL、アップロード、入力、結果表示 |
+| CrewAI | タスク順序、コンテキスト、ファイル出力 |
+| Vertex | Embeddings、Gemini による説明/レポート、Grounding |
+| 公共 API | 法人ファクト（MVP では求人コーパスではない） |
+
+**MVP 対象外**
+
+- Vector Search マネージドインデックス（Phase 2）
+- 求人ボックス publisher API（承認後）
+- ハローワーク API（職業紹介等の利用資格取得後）
+- 日本の履歴書/職務経歴書変換、ビザ診断、マルチモーダル・ポートフォリオ（Phase 3）
+- 本格 SaaS の認証/DB
+
+## 5. データフローと入出力
+
+### 5.1 実行入力
+
+- アップロードファイルから抽出した履歴書テキスト（`resume_ingest` 経由）
+- `{level, position, location}`（既定 `location=Japan`）
+- 出力言語: 韓国語（`ko`）
+
+### 5.2 スキーマ変更（最小）
+
+**`RankedJob`（拡張）**
+
+- `semantic_score: float` — 主ランキング信号
+- `url_verified: bool` — 求人 URL を Grounding/取得で確認
+- 既存の `match_score`（1–5）は副次 / フォールバック説明用として維持
+
+**`CompanyFactcheck`（新規）**
+
+- `corporate_number: str | None`
+- `gbiz_fields: dict` — 取得できた公開フィールド
+- `risk_tags: list[str]`
+- `summary_ko: str`
+- `sources: list[str]`
+- `status: "verified" | "public_unconfirmed" | "error"`
+
+### 5.3 出力
+
+- Streamlit MVP パスは次のみ実行: 検索 → semantic match → 選定 → 企業ファクトチェック
+- Streamlit: ランキング表 + ファクトチェックパネル
+- ファイル（任意ダウンロード）: `output/company_factcheck.md`
+- 既存の履歴書書き換え / 企業調査 / 面接準備エージェントはコードベースに残し、CLI（`main.py`）で利用可能。Streamlit MVP の受け入れ条件には含めない
+- ランキング規則: `semantic_score` でソート。`url_verified` 失敗は降格または除外
+
+### 5.4 フォールバック
+
+| 失敗 | 動作 |
+|------|------|
+| 履歴書パース失敗 | エラー表示。テンプレ再ダウンロードを促す |
+| Vertex embedding/Gemini 失敗 | 既存 LLM マッチングへフォールバック。UI に「品質↓」バッジ |
+| URL 検証失敗 | 除外または最下位 |
+| gBizINFO 未マッチ | `public_unconfirmed` + Web Grounding のみの弱いレポート |
+| 検索 0 件 | 停止。条件緩和を提案 |
+
+## 6. 求人データソース（段階）
+
+| 段階 | ソース | 時期 |
+|------|--------|------|
+| MVP | Firecrawl 経由の公開 Web（ToS/robots 尊重） | 現在 |
+| MVP 任意 | Wantedly 公開 JSON（利用条件確認後） | 法務/ToS 確認後 |
+| 提携後 | 求人ボックス 求人検索API（publisher。サイト審査。クリック送客モデル — 生ダンプではない） | 承認後 |
+| 資格取得後 | ハローワーク 求人情報提供 API | 利用対象（有料/無料職業紹介事業者、自治体、学校等）に該当する場合のみ。**個人や一般スタートアップが誰でも無料 JSON を使えるわけではない** |
+
+ハローワークを「誰でも無料の JSON API」と記載してはならない。
+
+## 7. コンポーネント
+
+| 単位 | 責任 | 依存 |
+|------|------|------|
+| `app.py`（Streamlit） | テンプレ DL、アップロード、実行、表示 | crew runner |
+| `resume_ingest` | PDF/DOCX/TXT/MD → テキスト。テンプレパス提供 | pypdf / python-docx 等 |
+| `knowledge/templates/직무이력서_템플릿.*` | ダウンロード可能な韓国語職務履歴書テンプレ | — |
+| `job_search_agent` | 日本求人の収集・正規化 | Firecrawl |
+| `semantic_match` | Embed + ランク + 韓国語理由 + URL 確認 | Vertex AI |
+| `job_selection` | 最適求人 1 件の選定 | — |
+| `company_factcheck` | 法人番号 + gBizINFO + 韓国語リスク要約 | 公共 API、Vertex |
+| Config / secrets | GCP プロジェクト、API キー | `.env` / Secret Manager |
+
+`uv run python main.py` は UI なしのデバッグ用として残す。
+
+## 8. Streamlit UX（MVP）
+
+1. 主要アクション: **職務履歴書テンプレートのダウンロード**
+2. 記入済み履歴書のファイルアップローダ
+3. フォーム: level, position, location（既定 Japan）
+4. 実行ボタン → 進捗 / ログ（軽量）
+5. 結果:
+   - ランキング求人: タイトル、企業、semantic_score、reason_ko、url_verified、リンク
+   - 選定求人のファクトチェック: status、risk tags、summary_ko、sources
+6. ファクトチェック Markdown のダウンロード
+
+テンプレ形式: 韓国語の **職務履歴書**（MVP では日本の正式な履歴書様式ではない）。
+
+## 9. セキュリティとプライバシー
+
+- 履歴書本文のモデル呼び出しは **Vertex AI** 経路のみ（エンタープライズデータガバナンス。GCP 条件に沿い学習再利用しない設定をプロジェクトで固定）。
+- 既定: アップロードと抽出テキストは **セッション一時**。実行/セッション終了後に削除。
+- `output/` と個人履歴書は gitignore を維持。
+- 履歴書全文・連絡先をログに残さない。
+- API キーを UI やコミット対象に置かない。
+
+## 10. Vertex 利用（MVP vs 後続）
+
+| 機能 | MVP | 後続 |
+|------|-----|------|
+| text-embedding + バッチ内 cosine | Yes | — |
+| Gemini による韓国語理由 / ファクトチェック | Yes | — |
+| Grounding（URL / 企業主張） | Yes | — |
+| Vector Search インデックス | No | コーパス拡大後 Phase 2 |
+| マルチモーダル PDF/ポートフォリオ一括 | No | Phase 3 |
+| Vertex vs AI Studio | クォータ/プライバシーのため Vertex（GCP） | — |
+
+## 11. 受け入れ条件
+
+1. Streamlit からテンプレ DL → 記入 → アップロード → 1 サイクル実行ができる
+2. ランキングに `semantic_score`、韓国語 `reason`、`url_verified` が表示される
+3. 選定企業のファクトチェックが公共法人データ付き、または明示的な `public_unconfirmed` になる
+4. Vertex 障害時に LLM フォールバックが動き、UI に品質バッジが出る
+5. 既定設定ではセッション/実行クリーンアップ後にアップロード履歴書がディスクに残らない
+6. README に GCP/Vertex 設定、gBizINFO 利用、Streamlit 実行手順が書かれている
+
+## 12. 実装フェーズ
+
+**Phase 1（本 MVP）**  
+Streamlit + テンプレ + ingest + semantic_match + company_factcheck + Grounding + 韓国語出力。
+
+**Phase 2**  
+Vector Search。求人ボックス publisher（承認時）。求人コーパス拡充。
+
+**Phase 3**  
+日本書類変換、ビザヒューリスティック、マルチモーダル入力。
+
+**Phase 4（資格依存）**  
+法的に運用可能な場合のハローワーク API。
+
+## 13. リスク
+
+- 求人スクレイピングの ToS / ブロック — レート制限、出典明示、提携 API 優先で緩和
+- gBizINFO の社名マッチ曖昧性 — 不確かな場合は候補を人間に見せる、または法人番号確認を要求
+- 埋め込みの言語不一致（韓国語履歴書 vs 日本語 JD） — バイリンガル埋め込み、または embed 前の JD 要約翻訳を実装計画で検証
+- Grounding のコスト/レイテンシ — 実行単位で URL チェックをキャッシュ
+
+## 14. 実装計画に委ねる未決事項（ブロッカーではない）
+
+- 埋め込みモデル ID と類似度しきい値の既定値
+- 非選定のランキング求人にも軽いファクトチェックを付けるか、`ChosenJob` のみか
+- テンプレ形式: `.md` vs `.docx`（既定: MVP は `.md`。アップロード解析が python-docx 依存なら `.docx` も追加）
