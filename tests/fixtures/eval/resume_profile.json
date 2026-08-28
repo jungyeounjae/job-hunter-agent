@@ -1,0 +1,20 @@
+{
+  "headline_ko": "백엔드·풀스택 3년+, PHP/Go/GCP, 일본어 N2",
+  "target_roles": ["백엔드 엔지니어", "풀스택 엔지니어", "서버 사이드 엔지니어"],
+  "seniority_level": "Mid",
+  "years_of_experience": 3.0,
+  "skills": ["PHP", "Go", "Java", "TypeScript", "Laravel", "GCP", "MySQL", "PostgreSQL", "New Relic"],
+  "languages": [
+    {"code": "ko", "level": "native"},
+    {"code": "ja", "level": "business"}
+  ],
+  "visa_status": null,
+  "preferred_locations": ["Tokyo", "Japan"],
+  "search_queries_ja": ["バックエンドエンジニア 東京", "Go PHP サーバーサイド"],
+  "search_queries_en": ["backend engineer Tokyo"],
+  "matching_document": "バックエンド/サーバーサイドエンジニア。PHP, Go, Java, TypeScript, Laravel, GCP, MySQL。デリバリーアプリ開発、パフォーマンスチューニング（98%改善）、レガシー改善、API設計、Pub/Sub非同期処理。韓国語ネイティブ、日本語ビジネス（JLPT N2）。東京希望。",
+  "confidence": 0.9,
+  "field_confidence": [],
+  "parse_warnings": [],
+  "status": "ok"
+}

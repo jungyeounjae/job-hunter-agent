@@ -1,0 +1,255 @@
+{
+  "version": 1,
+  "candidate_id": "jung_yeounjae",
+  "description_ko": "본인 職務経歴書 기반 수동 라벨. match=지원·매칭 적합, no_match=부적합.",
+  "jobs": [
+    {
+      "id": "m01",
+      "label": "match",
+      "rationale_ko": "PHP/Go 백엔드, GCP, 도쿄 — 핵심 스택 일치",
+      "job": {
+        "job_title": "バックエンドエンジニア",
+        "company_name": "TechDelivery KK",
+        "job_location": "Tokyo",
+        "job_posting_url": "https://example.com/eval/m01",
+        "job_summary": "PHP/GoによるAPI開発、GCP上のマイクロサービス運用。パフォーマンス改善経験歓迎。",
+        "required_technologies": ["PHP", "Go", "GCP", "MySQL"],
+        "overseas_applicable": true,
+        "visa_support": true,
+        "japanese_level": "ビジネスレベル"
+      }
+    },
+    {
+      "id": "m02",
+      "label": "match",
+      "rationale_ko": "서버사이드·Laravel·레거시 개선",
+      "job": {
+        "job_title": "サーバーサイドエンジニア",
+        "company_name": "FoodTech Japan",
+        "job_location": "Tokyo",
+        "job_posting_url": "https://example.com/eval/m02",
+        "job_summary": "Laravel/PHPでのAPI設計、レガシーコードのリファクタリング、New Relic等での性能監視。",
+        "required_technologies": ["PHP", "Laravel", "MySQL"],
+        "japanese_level": "N2以上"
+      }
+    },
+    {
+      "id": "m03",
+      "label": "match",
+      "rationale_ko": "Go 백엔드 + 비동기 처리",
+      "job": {
+        "job_title": "Go Backend Engineer",
+        "company_name": "Async Systems",
+        "job_location": "Tokyo / Remote",
+        "job_posting_url": "https://example.com/eval/m03",
+        "job_summary": "Goによる高トラフィックAPI、Pub/Sub非同期処理、クエリチューニング。",
+        "required_technologies": ["Go", "GCP", "Pub/Sub"],
+        "overseas_applicable": true,
+        "visa_support": null
+      }
+    },
+    {
+      "id": "m04",
+      "label": "match",
+      "rationale_ko": "풀스택 Mid, TypeScript 포함",
+      "job": {
+        "job_title": "フルスタックエンジニア",
+        "company_name": "Startup Hub Tokyo",
+        "job_location": "Tokyo",
+        "job_posting_url": "https://example.com/eval/m04",
+        "job_summary": "TypeScript/React + PHP/Goバックエンド。要件定義からリリースまで。Mid〜Senior。",
+        "required_technologies": ["TypeScript", "PHP", "Go", "React"],
+        "role_seniority_level": "Mid"
+      }
+    },
+    {
+      "id": "m05",
+      "label": "match",
+      "rationale_ko": "Java/Spring 경력 활용 가능",
+      "job": {
+        "job_title": "Javaバックエンドエンジニア",
+        "company_name": "GovTech Solutions",
+        "job_location": "Tokyo",
+        "job_posting_url": "https://example.com/eval/m05",
+        "job_summary": "Spring Boot/Javaによる業務システム開発。PostgreSQL/Oracle。保守・テスト自動化経験者歓迎。",
+        "required_technologies": ["Java", "Spring", "PostgreSQL"]
+      }
+    },
+    {
+      "id": "m06",
+      "label": "match",
+      "rationale_ko": "デリバリー/大規模データ 처리 유사",
+      "job": {
+        "job_title": "Senior Backend Engineer",
+        "company_name": "Logistics App Inc",
+        "job_location": "Tokyo",
+        "job_posting_url": "https://example.com/eval/m06",
+        "job_summary": "大容量CSV処理、API負荷対策、GCP。デリバリー/ECドメイン経験優遇。",
+        "required_technologies": ["PHP", "Go", "GCP"],
+        "role_seniority_level": "Senior"
+      }
+    },
+    {
+      "id": "m07",
+      "label": "match",
+      "rationale_ko": "해외 거주자·온라인 면접 OK",
+      "job": {
+        "job_title": "Backend Engineer (Global Hiring)",
+        "company_name": "Global SaaS KK",
+        "job_location": "Tokyo",
+        "job_posting_url": "https://example.com/eval/m07",
+        "job_summary": "海外在住者オンライン面接可。PHP/Go API開発。ビザサポート相談可。",
+        "required_technologies": ["PHP", "Go"],
+        "overseas_applicable": true,
+        "visa_support": true,
+        "foreign_hire_track_record": true
+      }
+    },
+    {
+      "id": "m08",
+      "label": "match",
+      "rationale_ko": "인프라+백엔드, GCP",
+      "job": {
+        "job_title": "バックエンドエンジニア（GCP）",
+        "company_name": "Cloud Native JP",
+        "job_location": "Tokyo",
+        "job_posting_url": "https://example.com/eval/m08",
+        "job_summary": "GCP/Laravel/Go。ログ分析基盤、障害対応、チーム改善。",
+        "required_technologies": ["GCP", "Laravel", "Go"]
+      }
+    },
+    {
+      "id": "m09",
+      "label": "match",
+      "rationale_ko": "Mid 백엔드, 일본어 N2 충족",
+      "job": {
+        "job_title": "ミドルバックエンドエンジニア",
+        "company_name": "E-commerce Platform",
+        "job_location": "Tokyo",
+        "job_posting_url": "https://example.com/eval/m09",
+        "job_summary": "EC向けAPI、MySQLチューニング。日本語N2以上。3年以上の開発経験。",
+        "required_technologies": ["PHP", "MySQL"],
+        "japanese_level": "JLPT N2",
+        "years_of_experience_required": "3年以上"
+      }
+    },
+    {
+      "id": "n01",
+      "label": "no_match",
+      "rationale_ko": "프론트엔드 전용, React UI만",
+      "job": {
+        "job_title": "フロントエンドエンジニア",
+        "company_name": "UI Studio",
+        "job_location": "Tokyo",
+        "job_posting_url": "https://example.com/eval/n01",
+        "job_summary": "React/Next.js UI実装専任。バックエンド開発は不要。",
+        "required_technologies": ["React", "Next.js", "CSS"]
+      }
+    },
+    {
+      "id": "n02",
+      "label": "no_match",
+      "rationale_ko": "영업직, 개발 무관",
+      "job": {
+        "job_title": "法人営業（ITソリューション）",
+        "company_name": "Sales Force JP",
+        "job_location": "Tokyo",
+        "job_posting_url": "https://example.com/eval/n02",
+        "job_summary": "新規顧客開拓、提案営業。エンジニア経験不問。日本語ネイティブ必須。",
+        "japanese_level": "ネイティブ"
+      }
+    },
+    {
+      "id": "n03",
+      "label": "no_match",
+      "rationale_ko": "ML 연구, PhD 요구",
+      "job": {
+        "job_title": "Machine Learning Research Scientist",
+        "company_name": "AI Lab Tokyo",
+        "job_location": "Tokyo",
+        "job_posting_url": "https://example.com/eval/n03",
+        "job_summary": "深層学習論文発表、PhD必須。Python/PyTorch研究開発。",
+        "required_technologies": ["PyTorch", "Python"],
+        "minimum_education": "PhD"
+      }
+    },
+    {
+      "id": "n04",
+      "label": "no_match",
+      "rationale_ko": "신입 인턴, 경력 부족",
+      "job": {
+        "job_title": "新卒エンジニアインターン",
+        "company_name": "Fresh Grad Corp",
+        "job_location": "Tokyo",
+        "job_posting_url": "https://example.com/eval/n04",
+        "job_summary": "2027年卒向けインターン。未経験歓迎。プログラミング学習から。",
+        "role_seniority_level": "Intern"
+      }
+    },
+    {
+      "id": "n05",
+      "label": "no_match",
+      "rationale_ko": "iOS 네이티브만",
+      "job": {
+        "job_title": "iOSエンジニア",
+        "company_name": "Mobile First",
+        "job_location": "Osaka",
+        "job_posting_url": "https://example.com/eval/n05",
+        "job_summary": "Swift/SwiftUIによるiOSアプリ開発専門。",
+        "required_technologies": ["Swift", "SwiftUI"]
+      }
+    },
+    {
+      "id": "n06",
+      "label": "no_match",
+      "rationale_ko": "수동 QA, 코딩 불필요",
+      "job": {
+        "job_title": "手動QAテスター",
+        "company_name": "QA Outsourcing",
+        "job_location": "Tokyo",
+        "job_posting_url": "https://example.com/eval/n06",
+        "job_summary": "マニュアルテスト、テストケース実行。開発スキル不要。",
+        "required_technologies": []
+      }
+    },
+    {
+      "id": "n07",
+      "label": "no_match",
+      "rationale_ko": "임베디드 C/firmware",
+      "job": {
+        "job_title": "組込みソフトウェアエンジニア",
+        "company_name": "Hardware KK",
+        "job_location": "Nagoya",
+        "job_posting_url": "https://example.com/eval/n07",
+        "job_summary": "C/C++組込み開発、RTOS、ハードウェア知識必須。",
+        "required_technologies": ["C", "C++", "RTOS"]
+      }
+    },
+    {
+      "id": "n08",
+      "label": "no_match",
+      "rationale_ko": "SAP 컨설턴트, ERP",
+      "job": {
+        "job_title": "SAPコンサルタント",
+        "company_name": "ERP Partners",
+        "job_location": "Tokyo",
+        "job_posting_url": "https://example.com/eval/n08",
+        "job_summary": "SAP導入・カスタマイズ。ABAP/SAPモジュール経験必須。",
+        "required_technologies": ["SAP", "ABAP"]
+      }
+    },
+    {
+      "id": "n09",
+      "label": "no_match",
+      "rationale_ko": "게임 클라이언트 Unity",
+      "job": {
+        "job_title": "Unityゲームクライアントエンジニア",
+        "company_name": "Game Studio JP",
+        "job_location": "Tokyo",
+        "job_posting_url": "https://example.com/eval/n09",
+        "job_summary": "Unity/C#ゲームクライアント開発。3Dグラフィックス経験。",
+        "required_technologies": ["Unity", "C#"]
+      }
+    }
+  ]
+}

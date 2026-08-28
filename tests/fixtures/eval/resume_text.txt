@@ -1,0 +1,14 @@
+職務経歴書要約 — JUNG YEOUNJAE（韓国→日本就職候補）
+
+職務要約:
+バックエンド開発を軸に、要件定義から運用保守まで一気通貫。PHP/Go/Java/TypeScript、
+GCP、Laravel、MySQL。New Relicを用いた大規模データのパフォーマンスチューニング実績
+（処理時間98%削減）。レガシー改善、API設計、非同期処理（Pub/Sub）、チームリード補佐経験。
+
+直近: 株式会社menu — デリバリーアプリ サーバーサイドエンジニア（2023年8月〜）
+
+スキル: Java, PHP, Go, TypeScript, Spring, Laravel, GCP, PostgreSQL, Oracle, MySQL
+
+言語: 韓国語ネイティブ、日本語ビジネスレベル（JLPT N2）
+
+希望: バックエンド/フルスタックエンジニア、東京

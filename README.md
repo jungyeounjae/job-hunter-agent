@@ -94,6 +94,23 @@ uv run python main.py
 uv run pytest -v
 ```
 
+### 意味マッチ評価セット（手動ラベル 18件）
+
+本職務経歴書ベースの `match` 9件 / `no_match` 9件。プロンプトや blurb 変更の回帰判定用。
+
+```bash
+# オフライン（フィクスチャ・メトリクス検証）
+uv run pytest tests/test_semantic_eval.py -v
+
+# OpenAI 実 API でスコア分離を確認
+uv run pytest -m live tests/test_semantic_eval.py -v
+
+# レポート出力
+uv run python semantic_eval.py
+```
+
+フィクスチャ: `tests/fixtures/eval/`（`resume_text.txt`, `resume_profile.json`, `labeled_jobs.json`）
+
 ## エージェントの流れ
 
 ### 現行 CLI（実装済み）

@@ -41,6 +41,13 @@ class JobList(BaseModel):
     jobs: List[Job]
 
 
+class LabeledJob(BaseModel):
+    id: str
+    label: Literal["match", "no_match"]
+    rationale_ko: str = ""
+    job: Job
+
+
 class RankedJob(BaseModel):
     job: Job
     match_score: int
