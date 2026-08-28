@@ -110,3 +110,4 @@ class MvpRunResult(BaseModel):
     factcheck: CompanyFactcheck
     used_fallback: bool
     used_raw_resume_fallback: bool = False
+    run_artifact_dir: str | None = None

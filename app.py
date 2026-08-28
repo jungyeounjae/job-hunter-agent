@@ -119,6 +119,8 @@ if run:
         st.warning("품질↓ OpenAI 장애로 기본 매칭으로 전환되었습니다.")
     if result.used_raw_resume_fallback:
         st.warning("품질↓ 이력서 분석 실패로 원문 기반 매칭을 사용했습니다.")
+    if result.run_artifact_dir:
+        st.caption(f"실행 아티팩트: `{result.run_artifact_dir}` (inputs/result/manifest.json)")
 
     rows = []
     for r in result.ranked_jobs:

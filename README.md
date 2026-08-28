@@ -120,6 +120,20 @@ uv run python semantic_eval.py
 export JOB_DB_PATH=data/jobs.db
 ```
 
+### 実行アーティファクト（トークン・入出力ダンプ）
+
+MVP 実行ごとに `output/run-<UTCタイムスタンプ>/` へ JSON を保存します。
+
+| ファイル | 内容 |
+|----------|------|
+| `inputs.json` | 検索条件・履歴書テキスト |
+| `resume_profile.json` | R レイヤー分析結果 |
+| `jobs.json` | 収集求人 |
+| `result.json` | 最終 `MvpRunResult` |
+| `manifest.json` | OpenAI / Crew `token_usage` 合計 |
+
+プロンプト A/B 比較とコスト把握用。`output/` は gitignore 済み。
+
 ## エージェントの流れ
 
 ### 現行 CLI（実装済み）

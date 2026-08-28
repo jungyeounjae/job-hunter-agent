@@ -1,4 +1,5 @@
 from unittest.mock import MagicMock, patch
+from pathlib import Path
 
 from models import Job, JobList, RankedJob
 from crew_runner import _run_job_search, run_mvp, select_best_job
@@ -54,8 +55,9 @@ def test_run_job_search_passes_search_queries(mock_crew_cls):
     )
     mock_crew.kickoff.return_value = JobList(jobs=[job])
 
-    result = _run_job_search("Senior", "Backend", "Japan", "フルスタック 東京, full stack")
+    result, crew_usage = _run_job_search("Senior", "Backend", "Japan", "フルスタック 東京, full stack")
     assert len(result.jobs) == 1
+    assert isinstance(crew_usage, dict)
     mock_crew.kickoff.assert_called_once_with(
         inputs={
             "level": "Senior",
@@ -66,6 +68,9 @@ def test_run_job_search_passes_search_queries(mock_crew_cls):
     )
 
 
+@patch("crew_runner.save_mvp_run")
+@patch("crew_runner.create_run_dir")
+@patch("crew_runner.reset_usage_records")
 @patch("crew_runner.build_factcheck")
 @patch("crew_runner.apply_url_verification", side_effect=lambda ranked, cache=None: ranked)
 @patch("crew_runner.upsert_jobs")
@@ -79,6 +84,9 @@ def test_run_mvp_orchestrates_r_e_c(
     mock_upsert,
     _mock_url,
     mock_factcheck,
+    _mock_reset_usage,
+    mock_create_run_dir,
+    mock_save_run,
 ):
     from models import ChosenJob, CompanyFactcheck, ResumeProfile, LanguageSkill
 
@@ -107,7 +115,8 @@ def test_run_mvp_orchestrates_r_e_c(
         job_posting_url="https://example.com",
         job_summary="API",
     )
-    mock_search.return_value = JobList(jobs=[job])
+    mock_create_run_dir.return_value = Path("output/run-test")
+    mock_search.return_value = (JobList(jobs=[job]), {"total_tokens": 10})
 
     ranked_job = RankedJob(
         job=job,
@@ -135,5 +144,7 @@ def test_run_mvp_orchestrates_r_e_c(
     )
     mock_rank.assert_called_once_with("resume text", [job], profile)
     mock_upsert.assert_called_once_with([job])
+    mock_save_run.assert_called_once()
+    assert result.run_artifact_dir == "output/run-test"
     assert result.resume_profile == profile
     assert result.used_raw_resume_fallback is False

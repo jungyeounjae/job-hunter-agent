@@ -4,6 +4,8 @@ from typing import TypeVar
 from openai import OpenAI
 from pydantic import BaseModel
 
+from usage_tracker import record_usage
+
 
 class OpenAIClientError(RuntimeError):
     pass
@@ -25,6 +27,7 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
     try:
         model = os.environ.get("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
         response = _client().embeddings.create(model=model, input=texts)
+        record_usage("embeddings", model, response.usage)
         return [list(item.embedding) for item in response.data]
     except Exception as exc:
         raise OpenAIClientError(str(exc)) from exc
@@ -37,6 +40,7 @@ def generate_korean_text(prompt: str) -> str:
             model=model,
             messages=[{"role": "user", "content": prompt}],
         )
+        record_usage("chat", model, response.usage)
         content = response.choices[0].message.content
         if not content:
             raise OpenAIClientError("Empty response from OpenAI")
@@ -55,6 +59,7 @@ def generate_structured(prompt: str, model_type: type[T]) -> T:
             messages=[{"role": "user", "content": prompt}],
             response_format=model_type,
         )
+        record_usage("structured", model, response.usage)
         parsed = response.choices[0].message.parsed
         if parsed is None:
             raise OpenAIClientError("Structured parse returned empty")
