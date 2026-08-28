@@ -1,4 +1,5 @@
 from company_factcheck import build_factcheck
+from job_store import upsert_jobs
 from main import JobHunterCrew
 from models import ChosenJob, JobList, MvpRunResult, RankedJob
 from resume_analyze import analyze_resume
@@ -51,6 +52,8 @@ def run_mvp(
     job_list = _run_job_search(level, position, location, search_queries)
     if not job_list.jobs:
         raise ValueError("조건에 맞는 공고를 찾지 못했습니다. 검색 조건을 완화해 보세요.")
+
+    upsert_jobs(job_list.jobs)
 
     ranked, used_fallback, used_raw = rank_jobs_semantic(
         resume_text, job_list.jobs, profile

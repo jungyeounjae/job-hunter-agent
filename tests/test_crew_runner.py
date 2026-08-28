@@ -68,6 +68,7 @@ def test_run_job_search_passes_search_queries(mock_crew_cls):
 
 @patch("crew_runner.build_factcheck")
 @patch("crew_runner.apply_url_verification", side_effect=lambda ranked, cache=None: ranked)
+@patch("crew_runner.upsert_jobs")
 @patch("crew_runner.rank_jobs_semantic")
 @patch("crew_runner._run_job_search")
 @patch("crew_runner.analyze_resume")
@@ -75,6 +76,7 @@ def test_run_mvp_orchestrates_r_e_c(
     mock_analyze,
     mock_search,
     mock_rank,
+    mock_upsert,
     _mock_url,
     mock_factcheck,
 ):
@@ -132,5 +134,6 @@ def test_run_mvp_orchestrates_r_e_c(
         "Senior", "Backend", "Japan", "バックエンド 東京, backend Tokyo"
     )
     mock_rank.assert_called_once_with("resume text", [job], profile)
+    mock_upsert.assert_called_once_with([job])
     assert result.resume_profile == profile
     assert result.used_raw_resume_fallback is False

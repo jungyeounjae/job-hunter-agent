@@ -15,6 +15,7 @@ __pycache__/
 # Personal / generated artifacts
 knowledge/resume.txt
 output/
+data/
 
 # OS / editor
 .DS_Store

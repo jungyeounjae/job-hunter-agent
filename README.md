@@ -111,6 +111,15 @@ uv run python semantic_eval.py
 
 フィクスチャ: `tests/fixtures/eval/`（`resume_text.txt`, `resume_profile.json`, `labeled_jobs.json`）
 
+### 求人コーパス（SQLite）
+
+検索で取得した求人は `job_posting_url` をキーに SQLite（既定 `data/jobs.db`）へ upsert されます。重複 URL は最新 payload で更新されます。
+
+```bash
+# DB パス変更（任意）
+export JOB_DB_PATH=data/jobs.db
+```
+
 ## エージェントの流れ
 
 ### 現行 CLI（実装済み）
