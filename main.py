@@ -2,7 +2,7 @@ import dotenv
 
 dotenv.load_dotenv()
 
-from crewai import Crew, Agent, Task
+from crewai import Crew, Agent, Task, Process
 from crewai.project import CrewBase, task, agent, crew
 from crewai.knowledge.source.text_file_knowledge_source import TextFileKnowledgeSource
 from models import JobList, RankedJobList, ChosenJob
@@ -14,6 +14,14 @@ resume_knowledge = TextFileKnowledgeSource(
     ]
 )
 
+# Sequential pipeline: explicit caps to avoid runaway tool loops / delegation.
+AGENT_LIMITS = {
+    "allow_delegation": False,
+    "max_iter": 15,
+    "max_rpm": 10,
+    "max_execution_time": 300,
+}
+
 
 @CrewBase
 class JobHunterCrew:
@@ -23,6 +31,7 @@ class JobHunterCrew:
         return Agent(
             config=self.agents_config["job_search_agent"],
             tools=[web_search_tool],
+            **AGENT_LIMITS,
         )
 
     @agent
@@ -30,6 +39,7 @@ class JobHunterCrew:
         return Agent(
             config=self.agents_config["job_matching_agent"],
             knowledge_sources=[resume_knowledge],
+            **AGENT_LIMITS,
         )
 
     @agent
@@ -37,6 +47,7 @@ class JobHunterCrew:
         return Agent(
             config=self.agents_config["resume_optimization_agent"],
             knowledge_sources=[resume_knowledge],
+            **AGENT_LIMITS,
         )
 
     @agent
@@ -45,6 +56,7 @@ class JobHunterCrew:
             config=self.agents_config["company_research_agent"],
             knowledge_sources=[resume_knowledge],
             tools=[web_search_tool],
+            **AGENT_LIMITS,
         )
 
     @agent
@@ -52,6 +64,7 @@ class JobHunterCrew:
         return Agent(
             config=self.agents_config["interview_prep_agent"],
             knowledge_sources=[resume_knowledge],
+            **AGENT_LIMITS,
         )
 
     @task
@@ -110,6 +123,7 @@ class JobHunterCrew:
             agents=self.agents,
             tasks=self.tasks,
             verbose=True,
+            process=Process.sequential,
         )
 
 
