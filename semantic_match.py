@@ -25,6 +25,14 @@ def build_job_document(job: Job, blurb_ko: str | None = None) -> str:
         parts.append(job.full_raw_job_description)
     if job.required_technologies:
         parts.append(", ".join(job.required_technologies))
+    if job.overseas_applicable is not None:
+        parts.append(f"overseas_applicable: {job.overseas_applicable}")
+    if job.visa_support is not None:
+        parts.append(f"visa_support: {job.visa_support}")
+    if job.japanese_level:
+        parts.append(f"japanese_level: {job.japanese_level}")
+    if job.foreign_hire_track_record is not None:
+        parts.append(f"foreign_hire_track_record: {job.foreign_hire_track_record}")
     doc = "\n".join(p for p in parts if p)
     if blurb_ko:
         return f"[한국어 요약] {blurb_ko}\n{doc}"

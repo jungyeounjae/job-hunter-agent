@@ -107,3 +107,33 @@ def test_mvp_run_result_includes_profile_fields():
         used_raw_resume_fallback=True,
     )
     assert result.used_raw_resume_fallback is True
+
+
+def test_job_overseas_fields_default_to_none():
+    job = Job(
+        job_title="Backend",
+        company_name="Co",
+        job_location="Tokyo",
+        job_posting_url="https://example.com/job",
+        job_summary="API role",
+    )
+    assert job.overseas_applicable is None
+    assert job.visa_support is None
+    assert job.japanese_level is None
+    assert job.foreign_hire_track_record is None
+
+
+def test_job_overseas_fields_accept_values():
+    job = Job(
+        job_title="Backend",
+        company_name="Co",
+        job_location="Tokyo",
+        job_posting_url="https://example.com/job",
+        job_summary="Remote OK for overseas applicants",
+        overseas_applicable=True,
+        visa_support=True,
+        japanese_level="JLPT N2",
+        foreign_hire_track_record=True,
+    )
+    assert job.overseas_applicable is True
+    assert job.japanese_level == "JLPT N2"

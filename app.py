@@ -11,6 +11,12 @@ from resume_ingest import TEMPLATE_PATH, UnsupportedResumeFormatError, parse_res
 st.set_page_config(page_title="일본 취업 매칭", layout="wide")
 st.title("일본 취업 — 이력서 분석 · 의미 매칭 · 기업 팩트체크")
 
+
+def _fmt_unknown_bool(value: bool | None) -> str:
+    if value is None:
+        return "미확인"
+    return "예" if value else "아니오"
+
 if "profile" not in st.session_state:
     st.session_state.profile = None
 if "resume_text" not in st.session_state:
@@ -121,6 +127,9 @@ if run:
                 "회사": r.job.company_name,
                 "직무": r.job.job_title,
                 "semantic_score": r.semantic_score,
+                "해외지원": _fmt_unknown_bool(r.job.overseas_applicable),
+                "비자스폰서": _fmt_unknown_bool(r.job.visa_support),
+                "일본어": r.job.japanese_level or "미확인",
                 "url_verified": r.url_verified,
                 "이유": r.reason,
                 "링크": r.job.job_posting_url,
@@ -128,7 +137,10 @@ if run:
         )
     st.subheader("매칭 결과")
     st.dataframe(rows, use_container_width=True)
-    st.caption("semantic_score: 0.5+ 양호 · 0.35–0.5 보통 · 0.35 미만 약함 (상대 순위 병행)")
+    st.caption(
+        "semantic_score: 0.5+ 양호 · 0.35–0.5 보통 · 0.35 미만 약함 (상대 순위 병행). "
+        "해외지원/비자/일본어 '미확인'은 공고에 명시 없음 — 제외 사유 아님."
+    )
 
     st.subheader("선정 기업 팩트체크")
     fc = result.factcheck

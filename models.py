@@ -26,6 +26,11 @@ class Job(BaseModel):
     job_benefits: List[str] | None = None
     includes_equity: bool | None = None
     offers_visa_sponsorship: bool | None = None
+    # Overseas applicant filters (None = 미확인, not "no requirement")
+    overseas_applicable: bool | None = None
+    visa_support: bool | None = None
+    japanese_level: str | None = None
+    foreign_hire_track_record: bool | None = None
     hiring_company_size: str | None = None
     hiring_industry: str | None = None
     source_listing_url: str | None = None

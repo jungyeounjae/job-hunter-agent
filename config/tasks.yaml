@@ -9,8 +9,14 @@ job_extraction_task:
     1. Use Web Search Tool with the queries above (prioritize Japanese queries).
     2. Extract the job listings from the search results.
     3. Filter out job listings that do not match the candidate profile.
+    4. For each job, extract overseas-applicant acceptance signals when present in the posting:
+       - overseas_applicable: overseas residents / online interview OK (true/false; null if not stated)
+       - visa_support: employer willing to sponsor visa (true/false; null if not stated — not visa procedure details)
+       - japanese_level: required level if stated (e.g. JLPT N2, ビジネスレベル, 不要; null if not stated)
+       - foreign_hire_track_record: signs the company hires foreign talent (true/false; null if unknown)
+       Use null for unstated fields — do not infer. Do not exclude jobs solely because these are null.
   expected_output: >
-    A JSON object matching the `JobList` schema.
+    A JSON object matching the `JobList` schema, including overseas_applicant fields when found in postings.
   agent: job_search_agent
 
 job_matching_task:
