@@ -9,8 +9,8 @@
 
 韓国から日本就職を目指す求職者向けに、既存の CrewAI パイプラインへ次を追加する。
 
-- **E — Semantic match:** Vertex embeddings により職務経歴書↔日本の求人を意味的にマッチング
-- **C — Company fact-check:** gBizINFO・法人番号などの公共データ + Grounding により企業信頼性レポートを作成
+- **E — Semantic match:** OpenAI embeddings により職務経歴書↔日本の求人を意味的にマッチング
+- **C — Company fact-check:** gBizINFO・法人番号などの公共データ + OpenAI 要約（韓国語）
 
 差別化: Geekly / リクルートエージェントの非公開求人・人間による交渉と正面衝突せず、**根拠のあるマッチング**と**検証可能な企業情報**を求職者自身の成果物として提供する。
 
@@ -23,12 +23,23 @@
 
 ## 3. アプローチ（確定）
 
-**ハイブリッド:** CrewAI オーケストレーション + Vertex AI（embeddings / Gemini / Grounding）+ 公共法人 API + Streamlit UI。
+**ハイブリッド:** CrewAI オーケストレーション + **OpenAI プライマリ（Phase 1）** + 公共法人 API + Streamlit UI。**Vertex AI は Phase 2** — MVP の出荷・受け入れには不要。
 
-MVP で採用しないもの:
+**AI プロバイダ戦略:**
+
+| Phase | プロバイダ | 役割 |
+|-------|-----------|------|
+| **Phase 1（MVP）** | **OpenAI**（プライマリ） | `text-embedding-3-small` + `gpt-4o-mini` — 意味マッチ + 韓国語要約 |
+| **Phase 2** | **Vertex AI**（任意） | Vector Search、Grounding、GCP プライバシー/コンプライアンス経路 |
+
+- **Phase 1 ファサード:** `ai_provider.py` が `embed_texts()` / `generate_korean_text()` を提供（**OpenAI のみ**）
+- **Phase 1 フォールバック:** OpenAI 障害 → CrewAI LLM マッチング。UI に「品質↓」
+- **Phase 2 拡張:** `ai_provider` に Vertex ルーティング（`AI_PROVIDER=vertex`）、クロスプロバイダフォールバック、Streamlit プロバイダ選択を追加
+
+MVP（Phase 1）で採用しないもの:
 
 - UI なしの CLI のみ — Streamlit アップロードを要求済み
-- CrewAI を捨てた Vertex 全面書き換え — リスクが高く E/C 検証が遅れる
+- Vertex/Gemini を **MVP 必須依存** にする — Phase 2 に延期
 - ハローワーク API を主ソースにする — 利用資格制限あり（§6 参照）
 
 ## 4. アーキテクチャ
@@ -47,13 +58,13 @@ MVP で採用しないもの:
 [job_search_agent] ← Firecrawl（MVP: 公開 Web）
         │
         ▼
-[semantic_match] ← Vertex embeddings + Gemini reason_ko + URL Grounding
+[semantic_match] ← ai_provider (OpenAI) + reason_ko + URL verify (httpx)
         │
         ▼
 [job_selection] → ChosenJob
         │
         ▼
-[company_factcheck] ← 法人番号 / gBizINFO + Gemini + Grounding
+[company_factcheck] ← gBizINFO + ai_provider summary (ko)
         │
         ▼
 [Streamlit] ランキング求人 + company_factcheck.md（+ ダウンロード）
@@ -63,10 +74,12 @@ MVP で採用しないもの:
 
 | レイヤー | 責任 |
 |----------|------|
-| Streamlit | テンプレ DL、アップロード、入力、結果表示 |
+| Streamlit | テンプレ DL、アップロード、入力、結果（プロバイダ選択: Phase 2） |
 | CrewAI | タスク順序、コンテキスト、ファイル出力 |
-| Vertex | Embeddings、Gemini による説明/レポート、Grounding |
-| 公共 API | 法人ファクト（MVP では求人コーパスではない） |
+| `ai_provider` | Phase 1: OpenAI。Phase 2: Vertex ルーティング追加 |
+| OpenAI | `text-embedding-3-small`, `gpt-4o-mini` — **Phase 1 プライマリ** |
+| Vertex AI | Vector Search、Grounding — **Phase 2** |
+| 公共 API | gBizINFO、HTTP URL 確認 |
 
 **MVP 対象外**
 
@@ -89,7 +102,7 @@ MVP で採用しないもの:
 **`RankedJob`（拡張）**
 
 - `semantic_score: float` — 主ランキング信号
-- `url_verified: bool` — 求人 URL を Grounding/取得で確認
+- `url_verified: bool` — 求人 URL を HTTP HEAD/GET で確認
 - 既存の `match_score`（1–5）は副次 / フォールバック説明用として維持
 
 **`CompanyFactcheck`（新規）**
@@ -114,9 +127,10 @@ MVP で採用しないもの:
 | 失敗 | 動作 |
 |------|------|
 | 履歴書パース失敗 | エラー表示。テンプレ再ダウンロードを促す |
-| Vertex embedding/Gemini 失敗 | 既存 LLM マッチングへフォールバック。UI に「品質↓」バッジ |
+| OpenAI 障害（Phase 1） | CrewAI LLM マッチング。UI「品質↓」 |
+| AI プロバイダ障害（Phase 2） | 代替プロバイダ（設定済みなら）→ CrewAI LLM。UI「品質↓」 |
 | URL 検証失敗 | 除外または最下位 |
-| gBizINFO 未マッチ | `public_unconfirmed` + Web Grounding のみの弱いレポート |
+| gBizINFO 未マッチ | `public_unconfirmed` + 提供データのみで OpenAI 要約 |
 | 検索 0 件 | 停止。条件緩和を提案 |
 
 ## 6. 求人データソース（段階）
@@ -138,10 +152,13 @@ MVP で採用しないもの:
 | `resume_ingest` | PDF/DOCX/TXT/MD → テキスト。テンプレパス提供 | pypdf / python-docx 等 |
 | `knowledge/templates/직무이력서_템플릿.*` | ダウンロード可能な韓国語職務履歴書テンプレ | — |
 | `job_search_agent` | 日本求人の収集・正規化 | Firecrawl |
-| `semantic_match` | Embed + ランク + 韓国語理由 + URL 確認 | Vertex AI |
+| `ai_provider` | embed + chat ルーティング（Phase 1: OpenAI; Phase 2: +Vertex） | `openai_client`（Phase 2: +`vertex_client`） |
+| `openai_client` | OpenAI embeddings + chat | `openai` SDK |
+| `vertex_client` | Vertex embeddings + Gemini | `google-cloud-aiplatform` — **Phase 2** |
+| `semantic_match` | Embed + ランク + 韓国語理由 + URL 確認 | `ai_provider` |
 | `job_selection` | 最適求人 1 件の選定 | — |
-| `company_factcheck` | 法人番号 + gBizINFO + 韓国語リスク要約 | 公共 API、Vertex |
-| Config / secrets | GCP プロジェクト、API キー | `.env` / Secret Manager |
+| `company_factcheck` | 法人番号 + gBizINFO + 韓国語リスク要約 | 公共 API、`ai_provider` |
+| Config / secrets | `OPENAI_API_KEY`、gBizINFO トークン。GCP は Phase 2 | `.env` |
 
 `uv run python main.py` は UI なしのデバッグ用として残す。
 
@@ -152,47 +169,52 @@ MVP で採用しないもの:
 3. フォーム: level, position, location（既定 Japan）
 4. 実行ボタン → 進捗 / ログ（軽量）
 5. 結果:
-   - ランキング求人: タイトル、企業、semantic_score、reason_ko、url_verified、リンク
-   - 選定求人のファクトチェック: status、risk tags、summary_ko、sources
-6. ファクトチェック Markdown のダウンロード
+   - フォールバック「品質↓」バッジ（OpenAI 障害時）
+   - *(Phase 2: サイドバー AI プロバイダ選択 + OpenAI/Vertex バッジ)*
+   - ランキング: title, company, semantic_score, reason_ko, url_verified, link
+   - 選定企業ファクトチェック: status, risk tags, summary_ko, sources
+6. ファクトチェック Markdown ダウンロード
 
 テンプレ形式: 韓国語の **職務履歴書**（MVP では日本の正式な履歴書様式ではない）。
 
 ## 9. セキュリティとプライバシー
 
-- 履歴書本文のモデル呼び出しは **Vertex AI** 経路のみ（エンタープライズデータガバナンス。GCP 条件に沿い学習再利用しない設定をプロジェクトで固定）。
+- Phase 1: 履歴書/求人テキストは **OpenAI** のみに送信。OpenAI データポリシーを確認すること。
+- Phase 2: GCP プライベートインフラを希望するユーザー向けに Vertex 経路を追加 — Google Cloud データ処理条項を確認すること。
 - 既定: アップロードと抽出テキストは **セッション一時**。実行/セッション終了後に削除。
 - `output/` と個人履歴書は gitignore を維持。
 - 履歴書全文・連絡先をログに残さない。
 - API キーを UI やコミット対象に置かない。
 
-## 10. Vertex 利用（MVP vs 後続）
+## 10. AI プロバイダ
 
-| 機能 | MVP | 後続 |
-|------|-----|------|
-| text-embedding + バッチ内 cosine | Yes | — |
-| Gemini による韓国語理由 / ファクトチェック | Yes | — |
-| Grounding（URL / 企業主張） | Yes | — |
-| Vector Search インデックス | No | コーパス拡大後 Phase 2 |
-| マルチモーダル PDF/ポートフォリオ一括 | No | Phase 3 |
-| Vertex vs AI Studio | クォータ/プライバシーのため Vertex（GCP） | — |
+| 機能 | Phase 1（OpenAI プライマリ） | Phase 2（Vertex） |
+|------|------------------------------|-------------------|
+| Embeddings | `text-embedding-3-small` | `text-embedding-005` |
+| 韓国語理由/ファクトチェック | `gpt-4o-mini` | `gemini-2.0-flash-001` |
+| HTTP URL verify | Yes（httpx） | Yes |
+| Vector Search インデックス | — | 大規模求人コーパス用 |
+| Grounding（Google Search） | — | ファクトチェック強化（任意） |
+| UI プロバイダ切替 | — | `AI_PROVIDER=openai\|vertex` + サイドバー |
+
+Phase 1 環境変数: `OPENAI_API_KEY`、`OPENAI_EMBEDDING_MODEL`、`OPENAI_CHAT_MODEL` のみ。GCP / `AI_PROVIDER` は Phase 2 で追加。
 
 ## 11. 受け入れ条件
 
 1. Streamlit からテンプレ DL → 記入 → アップロード → 1 サイクル実行ができる
 2. ランキングに `semantic_score`、韓国語 `reason`、`url_verified` が表示される
 3. 選定企業のファクトチェックが公共法人データ付き、または明示的な `public_unconfirmed` になる
-4. Vertex 障害時に LLM フォールバックが動き、UI に品質バッジが出る
+4. OpenAI 障害時に CrewAI LLM フォールバックが動き、UI に「品質↓」バッジが出る
 5. 既定設定ではセッション/実行クリーンアップ後にアップロード履歴書がディスクに残らない
-6. README に GCP/Vertex 設定、gBizINFO 利用、Streamlit 実行手順が書かれている
+6. README に OpenAI 設定、gBizINFO 利用、Streamlit 実行手順が書かれている（Vertex/GCP は Phase 2 として記載）
 
 ## 12. 実装フェーズ
 
 **Phase 1（本 MVP）**  
-Streamlit + テンプレ + ingest + semantic_match + company_factcheck + Grounding + 韓国語出力。
+Streamlit + テンプレ + ingest + `ai_provider`（**OpenAI プライマリ**）+ semantic_match + company_factcheck + 韓国語出力。
 
 **Phase 2**  
-Vector Search。求人ボックス publisher（承認時）。求人コーパス拡充。
+Vertex AI 統合（`vertex_client`、プロバイダ切替、Vector Search、Grounding）。求人ボックス publisher（承認時）。求人コーパス拡充。
 
 **Phase 3**  
 日本書類変換、ビザヒューリスティック、マルチモーダル入力。
@@ -205,7 +227,7 @@ Vector Search。求人ボックス publisher（承認時）。求人コーパス
 - 求人スクレイピングの ToS / ブロック — レート制限、出典明示、提携 API 優先で緩和
 - gBizINFO の社名マッチ曖昧性 — 不確かな場合は候補を人間に見せる、または法人番号確認を要求
 - 埋め込みの言語不一致（韓国語履歴書 vs 日本語 JD） — バイリンガル埋め込み、または embed 前の JD 要約翻訳を実装計画で検証
-- Grounding のコスト/レイテンシ — 実行単位で URL チェックをキャッシュ
+- Grounding のコスト/レイテンシ — Phase 2 項目。Phase 1 では HTTP URL チェックを実行単位でキャッシュ
 
 ## 14. 実装計画に委ねる未決事項（ブロッカーではない）
 

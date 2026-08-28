@@ -2,19 +2,21 @@
 
 韓国から日本就職を目指す求職者向けに、求人検索・意味的マッチング・企業ファクトチェックを支援するマルチエージェントプロジェクトです。
 
-現在は **CrewAI CLI** が動作します。次の MVP（Streamlit UI + Vertex AI 意味マッチ + gBizINFO 企業検証）は設計済みで、実装予定です。
+現在は **CrewAI CLI** が動作します。次の MVP（Streamlit UI + **OpenAI（Phase 1 プライマリ）** 意味マッチ + gBizINFO 企業検証）は設計済みで、実装予定です。**Vertex AI は Phase 2** で統合予定です。
 
 | 言語 | 設計書 |
 |------|--------|
-| 原文（韓/英混在） | [docs/superpowers/specs/2026-08-25-korea-japan-semantic-match-factcheck-design.md](docs/superpowers/specs/2026-08-25-korea-japan-semantic-match-factcheck-design.md) |
+| 原文 | [docs/superpowers/specs/2026-08-25-korea-japan-semantic-match-factcheck-design.md](docs/superpowers/specs/2026-08-25-korea-japan-semantic-match-factcheck-design.md) |
 | 日本語 | [docs/superpowers/specs/2026-08-25-korea-japan-semantic-match-factcheck-design.ja.md](docs/superpowers/specs/2026-08-25-korea-japan-semantic-match-factcheck-design.ja.md) |
+| 実装プラン | [docs/superpowers/plans/2026-08-28-korea-japan-mvp-implementation.md](docs/superpowers/plans/2026-08-28-korea-japan-mvp-implementation.md) |
 
 ## プロダクト方針（MVP）
 
 - **ターゲット:** 日本就職を希望する韓国の求職者（UI 出力は韓国語）
-- **E — Semantic match:** Vertex embeddings で履歴書↔日本求人を意味的にランキング
-- **C — Company fact-check:** 法人番号 / gBizINFO + Grounding で企業信頼性レポート
-- **UI:** Streamlit（職務履歴書テンプレートのダウンロード + ファイルアップロード）
+- **E — Semantic match:** OpenAI embeddings で履歴書↔日本求人を意味的にランキング
+- **C — Company fact-check:** 法人番号 / gBizINFO + OpenAI 要約（韓国語）
+- **AI プロバイダ:** Phase 1 は **OpenAI のみ**（契約済み）。**Vertex AI** は Phase 2（Vector Search、Grounding、GCP 学習用）
+- **UI:** Streamlit（職務履歴書テンプレ DL + ファイルアップロード）
 - **差別化:** 非公開求人や年収交渉の代行ではなく、根拠付きマッチングと検証可能な企業情報
 
 求人ソースは段階導入です（MVP は公開 Web / Firecrawl。求人ボックス・ハローワークは提携・利用資格後）。詳細は設計書 §6 を参照してください。
@@ -31,17 +33,35 @@ cp knowledge/resume.txt.example knowledge/resume.txt   # 自分の履歴書に�
 
 | 変数 | 用途 |
 |------|------|
-| `OPENAI_API_KEY` | 現行 CLI の LLM（フォールバックにも使用予定） |
+| `OPENAI_API_KEY` | CLI / MVP 既定 AI（embeddings + chat） |
 | `SERPER_API_KEY` | 検索連携（環境により使用） |
 | `FIRECRAWL_API_KEY` | Web 検索・求人ページ取得 |
 
-### MVP 実装時に追加予定の設定
+### MVP 実装時に追加予定の設定（Phase 1）
 
-| 変数 / 設定 | 用途 |
-|-------------|------|
-| GCP プロジェクト + Vertex AI | Embeddings / Gemini / Grounding（履歴書は Vertex 経路で処理） |
-| gBizINFO API 資格情報 | 法人ファクトチェック |
-| （任意）ADC / サービスアカウント | ローカルからの Vertex 呼び出し |
+| 変数 | 用途 |
+|------|------|
+| `OPENAI_EMBEDDING_MODEL` | 既定 `text-embedding-3-small` |
+| `OPENAI_CHAT_MODEL` | 既定 `gpt-4o-mini` |
+| `GBIZINFO_API_TOKEN` | 法人ファクトチェック |
+
+### Phase 2 で追加予定（Vertex AI）
+
+| 変数 | 用途 |
+|------|------|
+| `AI_PROVIDER` | `openai` または `vertex` |
+| `GOOGLE_CLOUD_PROJECT` | Vertex 使用時 |
+| `GOOGLE_CLOUD_LOCATION` | 例: `asia-northeast1` |
+| `VERTEX_EMBEDDING_MODEL` | 例: `text-embedding-005` |
+| `VERTEX_GEMINI_MODEL` | 例: `gemini-2.0-flash-001` |
+
+**Vertex セットアップ（Phase 2）:**
+
+```bash
+gcloud auth application-default login
+export GOOGLE_CLOUD_PROJECT=your-project-id
+export AI_PROVIDER=vertex
+```
 
 ## 実行
 
@@ -84,9 +104,9 @@ uv run streamlit run app.py
 |------|----------|------|
 | 1 | Resume ingest | アップロード履歴書をテキスト化（セッション一時） |
 | 2 | Job Search | 公開求人の収集 |
-| 3 | Semantic match | Vertex embeddings + 韓国語 reason + URL 検証 |
+| 3 | Semantic match | OpenAI (`ai_provider`) + 韓国語 reason + URL 検証 |
 | 4 | Job selection | 最適 1 件を選定 |
-| 5 | Company fact-check | gBizINFO / 法人番号 + Grounding レポート（韓国語） |
+| 5 | Company fact-check | gBizINFO + OpenAI レポート（韓国語） |
 
 履歴書書き換え・面接準備エージェントは CLI に残し、Streamlit MVP の必須受け入れ条件には含めません。
 
@@ -112,8 +132,8 @@ uv run streamlit run app.py
 
 | Phase | 内容 |
 |-------|------|
-| **1（MVP）** | Streamlit、テンプレ、semantic match、company fact-check、Grounding |
-| **2** | Vector Search、求人ボックス（承認後）、求人コーパス拡充 |
+| **1（MVP）** | Streamlit、`ai_provider`（**OpenAI プライマリ**）、semantic match、fact-check |
+| **2** | Vertex AI 統合、Vector Search、求人ボックス（承認後）、求人コーパス拡充 |
 | **3** | 日本の履歴書/職務経歴書変換、ビザ、マルチモーダル |
 | **4** | 利用資格がある場合のハローワーク API |
 
