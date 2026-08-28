@@ -1,11 +1,14 @@
 job_extraction_task:
   description: >
-    Find and extract {level} level {position} jobs in {location}.
+    Find jobs in {location} for a candidate with:
+    - Seniority: {level}
+    - Target role: {position}
+    - Additional search queries: {search_queries}
 
     Steps include:
-    1. Use Web Search Tool to search for {level} level {position} jobs in {location}.
+    1. Use Web Search Tool with the queries above (prioritize Japanese queries).
     2. Extract the job listings from the search results.
-    3. Filter out job listings that are not {level} level {position} jobs in {location}.
+    3. Filter out job listings that do not match the candidate profile.
   expected_output: >
     A JSON object matching the `JobList` schema.
   agent: job_search_agent

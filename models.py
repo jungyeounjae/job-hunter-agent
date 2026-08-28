@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Literal
 from pydantic import BaseModel
 from datetime import date
 
@@ -40,6 +40,8 @@ class RankedJob(BaseModel):
     job: Job
     match_score: int
     reason: str
+    semantic_score: float | None = None
+    url_verified: bool | None = None
 
 
 class RankedJobList(BaseModel):
@@ -50,3 +52,49 @@ class ChosenJob(BaseModel):
     job: Job
     selected: bool
     reason: str
+
+
+class LanguageSkill(BaseModel):
+    code: str
+    level: str
+
+
+class FieldConfidence(BaseModel):
+    field: str
+    confidence: float
+
+
+class ResumeProfile(BaseModel):
+    headline_ko: str
+    target_roles: list[str]
+    seniority_level: str | None = None
+    years_of_experience: float | None = None
+    skills: list[str]
+    languages: list[LanguageSkill]
+    visa_status: str | None = None
+    preferred_locations: list[str]
+    search_queries_ja: list[str]
+    search_queries_en: list[str]
+    matching_document: str
+    confidence: float
+    field_confidence: list[FieldConfidence] = []
+    parse_warnings: list[str]
+    status: Literal["ok", "partial", "failed"]
+
+
+class CompanyFactcheck(BaseModel):
+    corporate_number: str | None
+    gbiz_fields: dict
+    risk_tags: list[str]
+    summary_ko: str
+    sources: list[str]
+    status: Literal["verified", "public_unconfirmed", "error"]
+
+
+class MvpRunResult(BaseModel):
+    resume_profile: ResumeProfile | None = None
+    ranked_jobs: list[RankedJob]
+    chosen_job: ChosenJob
+    factcheck: CompanyFactcheck
+    used_fallback: bool
+    used_raw_resume_fallback: bool = False

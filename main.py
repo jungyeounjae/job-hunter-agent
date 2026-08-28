@@ -113,10 +113,11 @@ class JobHunterCrew:
         )
 
 
-JobHunterCrew().crew().kickoff(
-    inputs={
-        "level": "Senior",
-        "position": "AI Agents Developer",
-        "location": "Japan",
-    }
-)
+if __name__ == "__main__":
+    JobHunterCrew().crew().kickoff(
+        inputs={
+            "level": "Senior",
+            "position": "AI Agents Developer",
+            "location": "Japan",
+        }
+    )

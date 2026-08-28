@@ -48,6 +48,7 @@ Rejected for MVP (Phase 1):
 [Streamlit app]
   ├─ Download Korean 직무이력서 template
   ├─ Upload resume (PDF / DOCX / TXT / MD)
+  ├─ 「이력서 분석」→ level/position auto-fill (user override)
   ├─ Search inputs: level, position, location(=Japan)
   └─ Run
         │
@@ -55,10 +56,13 @@ Rejected for MVP (Phase 1):
 [resume_ingest] → session temp text
         │
         ▼
-[job_search_agent] ← Firecrawl (MVP public web)
+[resume_analyze] ← ai_provider structured JSON → ResumeProfile
         │
         ▼
-[semantic_match] ← ai_provider (OpenAI) + reason_ko + URL verify (httpx)
+[job_search_agent] ← profile search_queries + Firecrawl (MVP public web)
+        │
+        ▼
+[semantic_match] ← matching_document + JD blurb (ko) + ai_provider + URL verify (httpx)
         │
         ▼
 [job_selection] → ChosenJob
@@ -67,7 +71,7 @@ Rejected for MVP (Phase 1):
 [company_factcheck] ← gBizINFO + ai_provider summary (ko)
         │
         ▼
-[Streamlit] ranked jobs + company_factcheck.md (+ download)
+[Streamlit] profile panel + ranked jobs + company_factcheck.md (+ download)
 ```
 
 **Boundaries**
@@ -150,6 +154,8 @@ Do **not** document Hello Work as “anyone can use free JSON API.”
 |------|----------------|------------|
 | `app.py` (Streamlit) | Template DL, upload, run, display | crew runner |
 | `resume_ingest` | PDF/DOCX/TXT/MD → text; template path | pypdf / python-docx (or equivalent) |
+| `resume_analyze` | `raw_text` → `ResumeProfile` (structured extraction) | `ai_provider` |
+| `job_blurb` | JD → Korean 1–2 sentence blurb for embedding | `ai_provider` |
 | `knowledge/templates/직무이력서_템플릿.*` | Downloadable Korean career-history template | — |
 | `job_search_agent` | Collect/normalize JP jobs | Firecrawl |
 | `ai_provider` | Route embed + chat (Phase 1: OpenAI; Phase 2: +Vertex) | `openai_client` (+ `vertex_client` in Phase 2) |
