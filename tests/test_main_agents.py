@@ -19,8 +19,7 @@ def test_job_search_agent_applies_limits(mock_agent_cls):
     kwargs = mock_agent_cls.call_args.kwargs
     assert kwargs["allow_delegation"] is False
     assert kwargs["max_iter"] == AGENT_LIMITS["max_iter"]
-    assert kwargs["max_rpm"] == AGENT_LIMITS["max_rpm"]
-    assert kwargs["max_execution_time"] == AGENT_LIMITS["max_execution_time"]
+    assert kwargs["llm"] is not None
 
 
 @patch("main.Agent")

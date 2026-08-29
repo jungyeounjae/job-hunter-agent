@@ -1,14 +1,14 @@
 job_extraction_task:
   description: >
-    Find jobs in {location} for a candidate with:
-    - Seniority: {level}
-    - Target role: {position}
+    Find jobs in {location} (Japanese prefecture) for a candidate matching:
+    - Seniority (from profile/search): {level}
+    - Target role (from profile/search): {position}
     - Additional search queries: {search_queries}
 
     Steps include:
-    1. Use Web Search Tool with the queries above (prioritize Japanese queries).
-    2. Extract the job listings from the search results.
-    3. Filter out job listings that do not match the candidate profile.
+    1. Use Web Search Tool with queries above — include the prefecture name in Japanese.
+    2. Extract job listings located in or accepting work in {location}.
+    3. Prefer jobs aligned with the candidate profile embedded in search queries.
     4. For each job, extract overseas-applicant acceptance signals when present in the posting:
        - overseas_applicable: overseas residents / online interview OK (true/false; null if not stated)
        - visa_support: employer willing to sponsor visa (true/false; null if not stated — not visa procedure details)

@@ -1,8 +1,13 @@
 from unittest.mock import MagicMock, patch
 from pathlib import Path
 
-from models import Job, JobList, RankedJob
-from crew_runner import _run_job_search, run_mvp, select_best_job
+from models import Job, JobList, RankedJob, ResumeProfile, LanguageSkill
+from crew_runner import (
+    _profile_search_params,
+    _run_job_search,
+    run_mvp,
+    select_best_job,
+)
 
 
 def test_select_best_job_prefers_verified_and_semantic():
@@ -38,6 +43,29 @@ def test_select_best_job_prefers_verified_and_semantic():
     assert chosen.job.job_title == "High"
 
 
+def test_profile_search_params_uses_prefecture():
+    profile = ResumeProfile(
+        headline_ko="백엔드",
+        target_roles=["バックエンドエンジニア"],
+        seniority_level="Mid",
+        years_of_experience=3.0,
+        skills=["Go"],
+        languages=[LanguageSkill(code="ja", level="business")],
+        visa_status=None,
+        preferred_locations=["Tokyo"],
+        search_queries_ja=["バックエンド 東京"],
+        search_queries_en=[],
+        matching_document="summary",
+        confidence=0.9,
+        parse_warnings=[],
+        status="ok",
+    )
+    level, position, location, queries = _profile_search_params(profile, "東京都")
+    assert location == "東京都"
+    assert "東京都" in queries
+    assert position == "バックエンドエンジニア"
+
+
 @patch("crew_runner.JobHunterCrew")
 def test_run_job_search_passes_search_queries(mock_crew_cls):
     mock_crew = MagicMock()
@@ -55,15 +83,15 @@ def test_run_job_search_passes_search_queries(mock_crew_cls):
     )
     mock_crew.kickoff.return_value = JobList(jobs=[job])
 
-    result, crew_usage = _run_job_search("Senior", "Backend", "Japan", "フルスタック 東京, full stack")
+    result, crew_usage = _run_job_search("Mid", "Backend", "東京都", "バックエンド 東京")
     assert len(result.jobs) == 1
     assert isinstance(crew_usage, dict)
     mock_crew.kickoff.assert_called_once_with(
         inputs={
-            "level": "Senior",
+            "level": "Mid",
             "position": "Backend",
-            "location": "Japan",
-            "search_queries": "フルスタック 東京, full stack",
+            "location": "東京都",
+            "search_queries": "バックエンド 東京",
         }
     )
 
@@ -88,12 +116,12 @@ def test_run_mvp_orchestrates_r_e_c(
     mock_create_run_dir,
     mock_save_run,
 ):
-    from models import ChosenJob, CompanyFactcheck, ResumeProfile, LanguageSkill
+    from models import ChosenJob, CompanyFactcheck
 
     profile = ResumeProfile(
         headline_ko="백엔드",
-        target_roles=["백엔드 엔지니어"],
-        seniority_level="Senior",
+        target_roles=["バックエンドエンジニア"],
+        seniority_level="Mid",
         years_of_experience=5.0,
         skills=["Python"],
         languages=[LanguageSkill(code="ko", level="native")],
@@ -111,7 +139,7 @@ def test_run_mvp_orchestrates_r_e_c(
     job = Job(
         job_title="Backend",
         company_name="Co",
-        job_location="Tokyo",
+        job_location="東京都",
         job_posting_url="https://example.com",
         job_summary="API",
     )
@@ -136,15 +164,21 @@ def test_run_mvp_orchestrates_r_e_c(
         status="public_unconfirmed",
     )
 
-    result = run_mvp("resume text", "Senior", "Backend", "Japan")
+    result = run_mvp("resume text", "東京都")
 
     mock_analyze.assert_called_once_with("resume text")
-    mock_search.assert_called_once_with(
-        "Senior", "Backend", "Japan", "バックエンド 東京, backend Tokyo"
-    )
+    mock_search.assert_called_once()
+    search_args = mock_search.call_args[0]
+    assert search_args[2] == "東京都"
     mock_rank.assert_called_once_with("resume text", [job], profile)
     mock_upsert.assert_called_once_with([job])
     mock_save_run.assert_called_once()
     assert result.run_artifact_dir == "output/run-test"
     assert result.resume_profile == profile
-    assert result.used_raw_resume_fallback is False
+
+
+def test_run_mvp_requires_prefecture():
+    import pytest
+
+    with pytest.raises(ValueError, match="도도부현"):
+        run_mvp("resume", "")

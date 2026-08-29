@@ -1,7 +1,7 @@
 from company_factcheck import build_factcheck
 from job_store import upsert_jobs
 from main import JobHunterCrew
-from models import ChosenJob, JobList, MvpRunResult, RankedJob
+from models import ChosenJob, JobList, MvpRunResult, RankedJob, ResumeProfile
 from resume_analyze import analyze_resume
 from run_artifacts import create_run_dir, save_mvp_run, serialize_crew_token_usage
 from semantic_match import rank_jobs_semantic
@@ -16,6 +16,17 @@ def select_best_job(ranked_jobs: list[RankedJob]) -> ChosenJob:
     return ChosenJob(job=best.job, selected=True, reason=best.reason)
 
 
+def _profile_search_params(profile: ResumeProfile, prefecture: str) -> tuple[str, str, str, str]:
+    level = profile.seniority_level or "Mid"
+    position = profile.target_roles[0] if profile.target_roles else "Engineer"
+    location = prefecture.strip()
+    queries = [*profile.search_queries_ja, *profile.search_queries_en]
+    if location and location not in ", ".join(queries):
+        queries.append(location)
+    search_queries = ", ".join(q.strip() for q in queries if q and q.strip())
+    return level, position, location, search_queries
+
+
 def _run_job_search(
     level: str,
     position: str,
@@ -28,6 +39,7 @@ def _run_job_search(
     crew = crew_base.crew()
     crew.tasks = [extraction]
     crew.agents = [search_agent]
+    crew.verbose = False
     raw = crew.kickoff(
         inputs={
             "level": level,
@@ -44,23 +56,22 @@ def _run_job_search(
     return JobList.model_validate(raw), crew_usage
 
 
-def run_mvp(
-    resume_text: str,
-    level: str,
-    position: str,
-    location: str = "Japan",
-) -> MvpRunResult:
+def run_mvp(resume_text: str, prefecture: str) -> MvpRunResult:
     from datetime import datetime, timezone
+
+    prefecture = prefecture.strip()
+    if not prefecture:
+        raise ValueError("근무 희망 도도부현을 선택해 주세요.")
 
     reset_usage_records()
     run_dir = create_run_dir()
     started_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
     profile = analyze_resume(resume_text)
-    search_queries = ", ".join(profile.search_queries_ja + profile.search_queries_en)
+    level, position, location, search_queries = _profile_search_params(profile, prefecture)
     job_list, crew_usage = _run_job_search(level, position, location, search_queries)
     if not job_list.jobs:
-        raise ValueError("조건에 맞는 공고를 찾지 못했습니다. 검색 조건을 완화해 보세요.")
+        raise ValueError("조건에 맞는 공고를 찾지 못했습니다. 다른 도도부현을 선택해 보세요.")
 
     upsert_jobs(job_list.jobs)
 
@@ -85,8 +96,9 @@ def run_mvp(
         run_dir,
         inputs={
             "started_at": started_at,
-            "level": level,
-            "position": position,
+            "prefecture": prefecture,
+            "derived_level": level,
+            "derived_position": position,
             "location": location,
             "search_queries": search_queries,
             "resume_text": resume_text,

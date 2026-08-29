@@ -4,6 +4,7 @@ import streamlit as st
 dotenv.load_dotenv()
 
 from crew_runner import run_mvp
+from japan_prefectures import JAPAN_PREFECTURES, match_prefecture
 from resume_analyze import analyze_resume
 from resume_ingest import TEMPLATE_PATH, UnsupportedResumeFormatError, parse_resume_bytes
 
@@ -17,16 +18,13 @@ def _fmt_unknown_bool(value: bool | None) -> str:
         return "미확인"
     return "예" if value else "아니오"
 
+
 if "profile" not in st.session_state:
     st.session_state.profile = None
 if "resume_text" not in st.session_state:
     st.session_state.resume_text = None
-if "level" not in st.session_state:
-    st.session_state.level = "Senior"
-if "position" not in st.session_state:
-    st.session_state.position = "Backend Engineer"
-if "location" not in st.session_state:
-    st.session_state.location = "Japan"
+if "prefecture" not in st.session_state:
+    st.session_state.prefecture = None
 
 with st.expander("직무이력서 템플릿", expanded=True):
     template_bytes = TEMPLATE_PATH.read_bytes()
@@ -56,10 +54,10 @@ if st.button("이력서 분석", type="secondary"):
         with st.spinner("이력서 분석 중…"):
             profile = analyze_resume(st.session_state.resume_text)
             st.session_state.profile = profile
-            if profile.seniority_level:
-                st.session_state.level = profile.seniority_level
-            if profile.target_roles:
-                st.session_state.position = profile.target_roles[0]
+            if profile.preferred_locations:
+                guessed = match_prefecture(*profile.preferred_locations)
+                if guessed:
+                    st.session_state.prefecture = guessed
 
 profile = st.session_state.profile
 if profile is not None:
@@ -73,6 +71,8 @@ if profile is not None:
         st.write(f"**요약:** {profile.headline_ko or '(없음)'}")
         if profile.target_roles:
             st.write(f"**희망 직무:** {', '.join(profile.target_roles)}")
+        if profile.seniority_level:
+            st.write(f"**레벨 (AI 추출):** {profile.seniority_level}")
         if profile.skills:
             st.write(f"**스킬:** {', '.join(profile.skills)}")
         if profile.languages:
@@ -88,13 +88,13 @@ if profile is not None:
             st.warning("주의: " + "; ".join(profile.parse_warnings))
         st.caption(f"분석 신뢰도: {profile.confidence:.0%} (AI 추출 결과)")
 
-col1, col2, col3 = st.columns(3)
-with col1:
-    st.text_input("레벨", key="level")
-with col2:
-    st.text_input("포지션", key="position")
-with col3:
-    st.text_input("근무지", key="location")
+st.selectbox(
+    "근무 희망 도도부현 *",
+    options=JAPAN_PREFECTURES,
+    index=None,
+    placeholder="도도부현을 선택하세요 (필수)",
+    key="prefecture",
+)
 
 run = st.button("매칭 실행", type="primary")
 
@@ -102,14 +102,15 @@ if run:
     if st.session_state.resume_text is None:
         st.error("이력서 파일을 업로드해 주세요. 템플릿을 다운로드해 작성할 수 있습니다.")
         st.stop()
+    if not st.session_state.prefecture:
+        st.error("근무 희망 도도부현을 선택해 주세요.")
+        st.stop()
 
     with st.spinner("일본 공고 검색 및 매칭 중..."):
         try:
             result = run_mvp(
                 st.session_state.resume_text,
-                st.session_state.level,
-                st.session_state.position,
-                st.session_state.location,
+                st.session_state.prefecture,
             )
         except ValueError as exc:
             st.warning(str(exc))

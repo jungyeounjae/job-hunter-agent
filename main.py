@@ -1,8 +1,10 @@
+import os
+
 import dotenv
 
 dotenv.load_dotenv()
 
-from crewai import Crew, Agent, Task, Process
+from crewai import Crew, Agent, Task, Process, LLM
 from crewai.project import CrewBase, task, agent, crew
 from crewai.knowledge.source.text_file_knowledge_source import TextFileKnowledgeSource
 from models import JobList, RankedJobList, ChosenJob
@@ -23,6 +25,13 @@ AGENT_LIMITS = {
 }
 
 
+def default_crew_llm() -> LLM:
+    model = os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini")
+    if not model.startswith("openai/"):
+        model = f"openai/{model}"
+    return LLM(model=model)
+
+
 @CrewBase
 class JobHunterCrew:
 
@@ -31,6 +40,7 @@ class JobHunterCrew:
         return Agent(
             config=self.agents_config["job_search_agent"],
             tools=[web_search_tool],
+            llm=default_crew_llm(),
             **AGENT_LIMITS,
         )
 
@@ -39,6 +49,7 @@ class JobHunterCrew:
         return Agent(
             config=self.agents_config["job_matching_agent"],
             knowledge_sources=[resume_knowledge],
+            llm=default_crew_llm(),
             **AGENT_LIMITS,
         )
 
@@ -47,6 +58,7 @@ class JobHunterCrew:
         return Agent(
             config=self.agents_config["resume_optimization_agent"],
             knowledge_sources=[resume_knowledge],
+            llm=default_crew_llm(),
             **AGENT_LIMITS,
         )
 
@@ -56,6 +68,7 @@ class JobHunterCrew:
             config=self.agents_config["company_research_agent"],
             knowledge_sources=[resume_knowledge],
             tools=[web_search_tool],
+            llm=default_crew_llm(),
             **AGENT_LIMITS,
         )
 
@@ -64,6 +77,7 @@ class JobHunterCrew:
         return Agent(
             config=self.agents_config["interview_prep_agent"],
             knowledge_sources=[resume_knowledge],
+            llm=default_crew_llm(),
             **AGENT_LIMITS,
         )
 
@@ -132,6 +146,7 @@ if __name__ == "__main__":
         inputs={
             "level": "Senior",
             "position": "AI Agents Developer",
-            "location": "Japan",
+            "location": "東京都",
+            "search_queries": "AI エージェント 東京",
         }
     )
