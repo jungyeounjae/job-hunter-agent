@@ -1,4 +1,7 @@
+import dotenv
 import pytest
+
+dotenv.load_dotenv()
 
 
 @pytest.fixture(autouse=True)
