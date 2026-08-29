@@ -14,7 +14,9 @@ job_search_agent:
     将来性のない行き止まりのポジションを見分ける方法を理解しています。
     各プラットフォーム固有の機能とデータポイントから最大限の価値を引き出す方法を知っています。
   verbose: true
-  # LLM は main.py の default_crew_llm() → OPENAI_CHAT_MODEL（既定 gpt-4o-mini）
+  respect_context_window: true
+  max_iter: 4
+  # LLM は main.py の default_crew_llm() → OPENAI_CHAT_MODEL（既定 gpt-5-nano）
 
 job_matching_agent:
   role: >
@@ -31,7 +33,7 @@ job_matching_agent:
     求人票の暗黙のシグナルを解釈できます。あなたの仕事は、各機会を1から5でスコアリングし、
     透明性を保つために元の求人フィールドをすべて保持しながら、そのスコアを明確に正当化することです。
   verbose: true
-  # LLM は main.py の default_crew_llm() → OPENAI_CHAT_MODEL（既定 gpt-4o-mini）
+  # LLM は main.py の default_crew_llm() → OPENAI_CHAT_MODEL（既定 gpt-5-nano）
 
 resume_optimization_agent:
   role: >
@@ -50,7 +52,7 @@ resume_optimization_agent:
     テクノロジー企業の中級からシニアレベルのポジション向けに履歴書を調整することを専門としています。
   verbose: true
   respect_context_window: true
-  # LLM は main.py の default_crew_llm() → OPENAI_CHAT_MODEL（既定 gpt-4o-mini）
+  # LLM は main.py の default_crew_llm() → OPENAI_CHAT_MODEL（既定 gpt-5-nano）
 
 company_research_agent:
   role: >
@@ -67,7 +69,7 @@ company_research_agent:
     戦略的に面接に臨めるようにすることに焦点を当てています。
   verbose: true
   respect_context_window: true
-  # LLM は main.py の default_crew_llm() → OPENAI_CHAT_MODEL（既定 gpt-4o-mini）
+  # LLM は main.py の default_crew_llm() → OPENAI_CHAT_MODEL（既定 gpt-5-nano）
 
 interview_prep_agent:
   role: >
@@ -82,4 +84,4 @@ interview_prep_agent:
 
     あなたは情報を戦術的なセクションに構成し、ざっと目を通しやすいようにし、候補者が輝けるように準備させます。
   verbose: true
-  # LLM は main.py の default_crew_llm() → OPENAI_CHAT_MODEL（既定 gpt-4o-mini）
+  # LLM は main.py の default_crew_llm() → OPENAI_CHAT_MODEL（既定 gpt-5-nano）

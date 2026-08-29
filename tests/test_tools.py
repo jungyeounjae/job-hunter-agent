@@ -2,7 +2,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from tools import WebSearchError, clean_search_markdown, search_web
+from tools import (
+    DEFAULT_SEARCH_LIMIT,
+    MAX_MARKDOWN_CHARS,
+    WebSearchError,
+    clean_search_markdown,
+    search_web,
+)
 
 
 def test_clean_search_markdown_preserves_urls():
@@ -25,6 +31,13 @@ def test_clean_search_markdown_collapses_excessive_newlines():
 def test_clean_search_markdown_keeps_single_newlines():
     text = "Job A\nJob B\nJob C"
     assert clean_search_markdown(text) == text
+
+
+def test_clean_search_markdown_truncates_long_content():
+    text = "A" * (MAX_MARKDOWN_CHARS + 500)
+    cleaned = clean_search_markdown(text)
+    assert len(cleaned) <= MAX_MARKDOWN_CHARS + len("\n…[truncated]")
+    assert cleaned.endswith("…[truncated]")
 
 
 @patch("tools.FirecrawlApp")
@@ -54,6 +67,26 @@ def test_search_web_uses_default_limit(mock_app_cls):
 
     results = search_web("backend engineer Tokyo")
 
-    assert mock_app.search.call_args.kwargs["limit"] == 15
+    assert mock_app.search.call_args.kwargs["limit"] == DEFAULT_SEARCH_LIMIT
     assert results[0]["url"] == "https://example.com/job"
     assert "https://example.com/job" in results[0]["markdown"]
+
+
+@patch("tools.FirecrawlApp")
+def test_search_web_truncates_markdown_per_result(mock_app_cls):
+    mock_app = MagicMock()
+    mock_app_cls.return_value = mock_app
+    mock_app.search.return_value = MagicMock(
+        success=True,
+        data=[
+            {
+                "title": "Huge listing",
+                "url": "https://jp.indeed.com/jobs",
+                "markdown": "X" * 20_000,
+            }
+        ],
+    )
+
+    results = search_web("backend Tokyo")
+    assert results[0]["markdown"].endswith("…[truncated]")
+    assert len(results[0]["markdown"]) <= MAX_MARKDOWN_CHARS + len("\n…[truncated]")

@@ -15,6 +15,30 @@ def test_cosine_similarity_orthogonal():
 @patch("semantic_match.generate_korean_text", return_value="일본 백엔드 경험과 일치")
 @patch("semantic_match.build_job_blurbs", return_value={})
 @patch("semantic_match.embed_texts")
+def test_rank_jobs_semantic_limits_llm_reasons(mock_embed, _mock_blurbs, mock_reason):
+    mock_embed.return_value = [[1.0, 0.0]] + [
+        [0.9 - i * 0.1, 0.1] for i in range(6)
+    ]
+    jobs = [
+        Job(
+            job_title=f"Job{i}",
+            company_name=f"Co{i}",
+            job_location="Tokyo",
+            job_posting_url=f"https://example.com/job/{i}",
+            job_summary="backend",
+        )
+        for i in range(6)
+    ]
+    ranked, _, _ = rank_jobs_semantic("resume text", jobs, reason_top_k=5)
+    assert len(ranked) == 6
+    assert mock_reason.call_count == 5
+    assert ranked[0].reason == "일본 백엔드 경험과 일치"
+    assert ranked[5].reason.startswith("의미 유사도")
+
+
+@patch("semantic_match.generate_korean_text", return_value="일본 백엔드 경험과 일치")
+@patch("semantic_match.build_job_blurbs", return_value={})
+@patch("semantic_match.embed_texts")
 def test_rank_jobs_semantic_orders_by_score(mock_embed, _mock_blurbs, _mock_reason):
     mock_embed.return_value = [
         [1.0, 0.0],  # resume

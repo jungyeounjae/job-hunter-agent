@@ -99,25 +99,21 @@ def test_run_job_search_passes_search_queries(mock_crew_cls):
 @patch("crew_runner.save_mvp_run")
 @patch("crew_runner.create_run_dir")
 @patch("crew_runner.reset_usage_records")
-@patch("crew_runner.build_factcheck")
 @patch("crew_runner.apply_url_verification", side_effect=lambda ranked, cache=None: ranked)
 @patch("crew_runner.upsert_jobs")
 @patch("crew_runner.rank_jobs_semantic")
 @patch("crew_runner._run_job_search")
 @patch("crew_runner.analyze_resume")
-def test_run_mvp_orchestrates_r_e_c(
+def test_run_mvp_orchestrates_r_e(
     mock_analyze,
     mock_search,
     mock_rank,
     mock_upsert,
     _mock_url,
-    mock_factcheck,
     _mock_reset_usage,
     mock_create_run_dir,
     mock_save_run,
 ):
-    from models import ChosenJob, CompanyFactcheck
-
     profile = ResumeProfile(
         headline_ko="백엔드",
         target_roles=["バックエンドエンジニア"],
@@ -155,15 +151,6 @@ def test_run_mvp_orchestrates_r_e_c(
     )
     mock_rank.return_value = ([ranked_job], False, False)
 
-    mock_factcheck.return_value = CompanyFactcheck(
-        corporate_number=None,
-        gbiz_fields={},
-        risk_tags=[],
-        summary_ko="ok",
-        sources=[],
-        status="public_unconfirmed",
-    )
-
     result = run_mvp("resume text", "東京都")
 
     mock_analyze.assert_called_once_with("resume text")
@@ -175,6 +162,53 @@ def test_run_mvp_orchestrates_r_e_c(
     mock_save_run.assert_called_once()
     assert result.run_artifact_dir == "output/run-test"
     assert result.resume_profile == profile
+
+
+def test_run_mvp_legacy_four_arg_call():
+    """Old Streamlit call style: run_mvp(text, level, position, location)."""
+    with (
+        patch("crew_runner.reset_usage_records"),
+        patch("crew_runner.create_run_dir", return_value=Path("output/run-test")),
+        patch("crew_runner.analyze_resume") as mock_analyze,
+        patch("crew_runner._run_job_search") as mock_search,
+        patch("crew_runner.upsert_jobs"),
+        patch("crew_runner.rank_jobs_semantic") as mock_rank,
+        patch("crew_runner.apply_url_verification", side_effect=lambda r, cache=None: r),
+        patch("crew_runner.save_mvp_run"),
+    ):
+        profile = ResumeProfile(
+            headline_ko="x",
+            target_roles=["Engineer"],
+            seniority_level="Mid",
+            years_of_experience=3.0,
+            skills=["Go"],
+            languages=[LanguageSkill(code="ja", level="business")],
+            visa_status=None,
+            preferred_locations=["Tokyo"],
+            search_queries_ja=["エンジニア"],
+            search_queries_en=[],
+            matching_document="x",
+            confidence=0.9,
+            parse_warnings=[],
+            status="ok",
+        )
+        mock_analyze.return_value = profile
+        job = Job(
+            job_title="Backend",
+            company_name="Co",
+            job_location="東京都",
+            job_posting_url="https://example.com",
+            job_summary="API",
+        )
+        mock_search.return_value = (JobList(jobs=[job]), {})
+        mock_rank.return_value = (
+            [RankedJob(job=job, match_score=4, reason="ok", semantic_score=0.7)],
+            False,
+            False,
+        )
+        run_mvp("resume", "Senior", "Backend", "大阪府")
+
+        assert mock_search.call_args[0][2] == "大阪府"
 
 
 def test_run_mvp_requires_prefecture():

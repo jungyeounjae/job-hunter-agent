@@ -16,9 +16,17 @@ def test_agent_limits_constants():
 def test_job_search_agent_applies_limits(mock_agent_cls):
     mock_agent_cls.return_value = MagicMock()
     JobHunterCrew().job_search_agent()
-    kwargs = mock_agent_cls.call_args.kwargs
+    # CrewBase may construct other agents during init; find the search agent call.
+    search_calls = [
+        c
+        for c in mock_agent_cls.call_args_list
+        if c.kwargs.get("tools")
+    ]
+    assert search_calls
+    kwargs = search_calls[0].kwargs
     assert kwargs["allow_delegation"] is False
-    assert kwargs["max_iter"] == AGENT_LIMITS["max_iter"]
+    assert kwargs["max_iter"] == 4
+    assert kwargs["respect_context_window"] is True
     assert kwargs["llm"] is not None
 
 

@@ -6,7 +6,7 @@ job_extraction_task:
     - Additional search queries: {search_queries}
 
     Steps include:
-    1. Use Web Search Tool with queries above — include the prefecture name in Japanese.
+    1. Use Web Search Tool at most 2 times with focused Japanese queries (include {location}).
     2. Extract job listings located in or accepting work in {location}.
     3. Prefer jobs aligned with the candidate profile embedded in search queries.
     4. For each job, extract overseas-applicant acceptance signals when present in the posting:

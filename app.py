@@ -1,16 +1,36 @@
+import importlib
+import inspect
+
 import dotenv
 import streamlit as st
 
 dotenv.load_dotenv()
 
-from crew_runner import run_mvp
+import crew_runner
+import main as crew_main
+import tools
+
+importlib.reload(tools)
+importlib.reload(crew_main)
+importlib.reload(crew_runner)
 from japan_prefectures import JAPAN_PREFECTURES, match_prefecture
 from resume_analyze import analyze_resume
 from resume_ingest import TEMPLATE_PATH, UnsupportedResumeFormatError, parse_resume_bytes
 
 
+def _call_run_mvp(resume_text: str, prefecture: str, on_progress=None):
+    """Streamlit dev reload/cache와 구 시그니처 모두 대응."""
+    fn = crew_runner.run_mvp
+    sig = inspect.signature(fn)
+    if "on_progress" in sig.parameters:
+        return fn(resume_text, prefecture, on_progress=on_progress)
+    if "prefecture" in sig.parameters:
+        return fn(resume_text, prefecture)
+    return fn(resume_text, "Mid", "Engineer", prefecture)
+
+
 st.set_page_config(page_title="일본 취업 매칭", layout="wide")
-st.title("일본 취업 — 이력서 분석 · 의미 매칭 · 기업 팩트체크")
+st.title("일본 취업 — 이력서 분석 · 의미 매칭")
 
 
 def _fmt_unknown_bool(value: bool | None) -> str:
@@ -106,15 +126,23 @@ if run:
         st.error("근무 희망 도도부현을 선택해 주세요.")
         st.stop()
 
-    with st.spinner("일본 공고 검색 및 매칭 중..."):
+    with st.status("매칭 진행 중…", expanded=True) as status:
+
+        def _progress(message: str) -> None:
+            status.update(label=message)
+
         try:
-            result = run_mvp(
+            result = _call_run_mvp(
                 st.session_state.resume_text,
                 st.session_state.prefecture,
+                on_progress=_progress,
             )
         except ValueError as exc:
+            status.update(label="실패", state="error")
             st.warning(str(exc))
             st.stop()
+
+        status.update(label="매칭 완료", state="complete")
 
     if result.used_fallback:
         st.warning("품질↓ OpenAI 장애로 기본 매칭으로 전환되었습니다.")
@@ -142,29 +170,14 @@ if run:
     st.dataframe(rows, use_container_width=True)
     st.caption(
         "semantic_score: 0.5+ 양호 · 0.35–0.5 보통 · 0.35 미만 약함 (상대 순위 병행). "
+        "상위 5건만 LLM 매칭 이유 생성 · 나머지는 유사도 점수만 표시. "
         "해외지원/비자/일본어 '미확인'은 공고에 명시 없음 — 제외 사유 아님."
     )
 
-    st.subheader("선정 기업 팩트체크")
-    fc = result.factcheck
-    st.write(f"**상태:** {fc.status}")
-    if fc.corporate_number:
-        st.write(f"**法人番号:** {fc.corporate_number}")
-    if fc.risk_tags:
-        st.write(f"**리스크 태그:** {', '.join(fc.risk_tags)}")
-    st.write(fc.summary_ko)
-    st.caption("출처: " + ", ".join(fc.sources))
-
-    md = (
-        f"# 기업 팩트체크\n\n"
-        f"- 상태: {fc.status}\n"
-        f"- 法人番号: {fc.corporate_number or 'N/A'}\n\n"
-        f"## 요약\n{fc.summary_ko}\n\n"
-        f"## 출처\n" + "\n".join(f"- {s}" for s in fc.sources)
-    )
-    st.download_button(
-        label="팩트체크 Markdown 다운로드",
-        data=md.encode("utf-8"),
-        file_name="company_factcheck.md",
-        mime="text/markdown",
-    )
+    chosen = result.chosen_job.job
+    st.subheader("선정 공고")
+    st.write(f"**{chosen.company_name}** — {chosen.job_title}")
+    st.write(f"**선정 이유:** {result.chosen_job.reason}")
+    st.write(f"**근무지:** {chosen.job_location}")
+    st.link_button("공고 보기", chosen.job_posting_url)
+    st.caption("공개 채용 공고는 게시된 채용 플랫폼·기업 채널을 신뢰 근거로 합니다.")

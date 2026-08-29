@@ -1,4 +1,5 @@
-from company_factcheck import build_factcheck
+from collections.abc import Callable
+
 from job_store import upsert_jobs
 from main import JobHunterCrew
 from models import ChosenJob, JobList, MvpRunResult, RankedJob, ResumeProfile
@@ -7,6 +8,8 @@ from run_artifacts import create_run_dir, save_mvp_run, serialize_crew_token_usa
 from semantic_match import rank_jobs_semantic
 from url_verify import apply_url_verification
 from usage_tracker import reset_usage_records
+
+ProgressCallback = Callable[[str], None]
 
 
 def select_best_job(ranked_jobs: list[RankedJob]) -> ChosenJob:
@@ -56,10 +59,32 @@ def _run_job_search(
     return JobList.model_validate(raw), crew_usage
 
 
-def run_mvp(resume_text: str, prefecture: str) -> MvpRunResult:
+def _notify(on_progress: ProgressCallback | None, message: str) -> None:
+    if on_progress is not None:
+        on_progress(message)
+
+
+def run_mvp(
+    resume_text: str,
+    prefecture: str,
+    position: str | None = None,
+    location: str | None = None,
+    *,
+    on_progress: ProgressCallback | None = None,
+) -> MvpRunResult:
+    """Run R→E pipeline.
+
+    Preferred: ``run_mvp(resume_text, prefecture)`` e.g. ``("...", "東京都")``.
+    Legacy (deprecated): ``run_mvp(resume_text, level, position, location)`` —
+    ``location`` is used as prefecture; level/position come from ResumeProfile.
+    """
     from datetime import datetime, timezone
 
-    prefecture = prefecture.strip()
+    if position is not None:
+        prefecture = (location or prefecture or "").strip()
+    else:
+        prefecture = prefecture.strip()
+
     if not prefecture:
         raise ValueError("근무 희망 도도부현을 선택해 주세요.")
 
@@ -67,27 +92,33 @@ def run_mvp(resume_text: str, prefecture: str) -> MvpRunResult:
     run_dir = create_run_dir()
     started_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
+    _notify(on_progress, "이력서 분석 중…")
     profile = analyze_resume(resume_text)
     level, position, location, search_queries = _profile_search_params(profile, prefecture)
+
+    _notify(on_progress, "일본 공고 검색 중…")
     job_list, crew_usage = _run_job_search(level, position, location, search_queries)
     if not job_list.jobs:
         raise ValueError("조건에 맞는 공고를 찾지 못했습니다. 다른 도도부현을 선택해 보세요.")
 
     upsert_jobs(job_list.jobs)
 
+    _notify(on_progress, "의미 매칭 중…")
     ranked, used_fallback, used_raw = rank_jobs_semantic(
         resume_text, job_list.jobs, profile
     )
+
+    _notify(on_progress, "공고 URL 확인 중…")
     url_cache: dict[str, bool] = {}
     ranked = apply_url_verification(ranked, cache=url_cache)
     chosen = select_best_job(ranked)
-    factcheck = build_factcheck(chosen.job.company_name, chosen.job.job_posting_url)
+
+    _notify(on_progress, "완료")
 
     result = MvpRunResult(
         resume_profile=profile if profile.status != "failed" else None,
         ranked_jobs=ranked,
         chosen_job=chosen,
-        factcheck=factcheck,
         used_fallback=used_fallback,
         used_raw_resume_fallback=used_raw,
     )

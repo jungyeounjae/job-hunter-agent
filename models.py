@@ -93,21 +93,10 @@ class ResumeProfile(BaseModel):
     parse_warnings: list[str]
     status: Literal["ok", "partial", "failed"]
 
-
-class CompanyFactcheck(BaseModel):
-    corporate_number: str | None
-    gbiz_fields: dict
-    risk_tags: list[str]
-    summary_ko: str
-    sources: list[str]
-    status: Literal["verified", "public_unconfirmed", "error"]
-
-
 class MvpRunResult(BaseModel):
     resume_profile: ResumeProfile | None = None
     ranked_jobs: list[RankedJob]
     chosen_job: ChosenJob
-    factcheck: CompanyFactcheck
     used_fallback: bool
     used_raw_resume_fallback: bool = False
     run_artifact_dir: str | None = None

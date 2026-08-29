@@ -2,8 +2,8 @@
 
 import os
 
-# Phase 1 MVP: cheap & sufficient (see .env.example)
-DEFAULT_CHAT_MODEL = os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini")
+# Cheapest OpenAI chat + embedding tiers (see .env.example)
+DEFAULT_CHAT_MODEL = os.getenv("OPENAI_CHAT_MODEL", "gpt-5-nano")
 DEFAULT_EMBEDDING_MODEL = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
 
 

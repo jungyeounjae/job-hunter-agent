@@ -41,7 +41,11 @@ class JobHunterCrew:
             config=self.agents_config["job_search_agent"],
             tools=[web_search_tool],
             llm=default_crew_llm(),
-            **AGENT_LIMITS,
+            allow_delegation=False,
+            max_iter=4,
+            max_rpm=10,
+            max_execution_time=300,
+            respect_context_window=True,
         )
 
     @agent
@@ -142,11 +146,53 @@ class JobHunterCrew:
 
 
 if __name__ == "__main__":
-    JobHunterCrew().crew().kickoff(
-        inputs={
-            "level": "Senior",
-            "position": "AI Agents Developer",
-            "location": "東京都",
-            "search_queries": "AI エージェント 東京",
-        }
+    import argparse
+    from pathlib import Path
+
+    parser = argparse.ArgumentParser(description="Job Hunter Agent CLI")
+    parser.add_argument(
+        "--mode",
+        choices=["mvp", "full"],
+        default="mvp",
+        help="mvp: R→E (same as Streamlit). full: legacy 6-step Crew pipeline.",
     )
+    parser.add_argument(
+        "--prefecture",
+        default="東京都",
+        help="Target prefecture for mvp mode (default: 東京都)",
+    )
+    args = parser.parse_args()
+
+    if args.mode == "mvp":
+        from crew_runner import run_mvp
+
+        resume_path = Path("knowledge/resume.txt")
+        if not resume_path.exists():
+            raise SystemExit(
+                "knowledge/resume.txt not found. "
+                "Copy knowledge/resume.txt.example and fill in your resume."
+            )
+        resume_text = resume_path.read_text(encoding="utf-8")
+
+        def _cli_progress(message: str) -> None:
+            print(f"→ {message}", flush=True)
+
+        result = run_mvp(
+            resume_text,
+            args.prefecture,
+            on_progress=_cli_progress,
+        )
+        print(f"\n선정: {result.chosen_job.job.company_name} — {result.chosen_job.job.job_title}")
+        print(f"이유: {result.chosen_job.reason}")
+        print(f"링크: {result.chosen_job.job.job_posting_url}")
+        if result.run_artifact_dir:
+            print(f"아티팩트: {result.run_artifact_dir}")
+    else:
+        JobHunterCrew().crew().kickoff(
+            inputs={
+                "level": "Senior",
+                "position": "AI Agents Developer",
+                "location": args.prefecture,
+                "search_queries": "AI エージェント 東京",
+            }
+        )

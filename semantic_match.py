@@ -1,8 +1,13 @@
 import math
+from collections.abc import Callable
 
 from ai_provider import AiProviderError, embed_texts, generate_korean_text
 from job_blurb import build_job_blurbs
 from models import Job, RankedJob, ResumeProfile
+
+# LLM cost control: blurbs/reasons only for top-ranked jobs after embedding sort.
+BLURB_TOP_K = 8
+REASON_TOP_K = 5
 
 
 def cosine_similarity(a: list[float], b: list[float]) -> float:
@@ -71,10 +76,17 @@ def _build_reason_prompt(
     )
 
 
+def _score_only_reason(score: float) -> str:
+    return f"의미 유사도 {score:.2f}"
+
+
 def rank_jobs_semantic(
     resume_text: str,
     jobs: list[Job],
     profile: ResumeProfile | None = None,
+    *,
+    reason_top_k: int = REASON_TOP_K,
+    blurb_top_k: int = BLURB_TOP_K,
 ) -> tuple[list[RankedJob], bool, bool]:
     if not jobs:
         return [], False, False
@@ -87,25 +99,33 @@ def rank_jobs_semantic(
     candidate_doc = profile.matching_document if use_profile else resume_text
     used_raw_resume_fallback = not use_profile
 
-    blurbs = build_job_blurbs(jobs)
-    documents = [
-        build_job_document(job, blurbs.get(job.job_posting_url))
-        for job in jobs
-    ]
+    documents = [build_job_document(job) for job in jobs]
     try:
         vectors = embed_texts([candidate_doc, *documents])
     except AiProviderError:
         return _fallback_rank(jobs), True, used_raw_resume_fallback
 
     resume_vec = vectors[0]
-    ranked: list[RankedJob] = []
+    scored: list[tuple[float, Job, str]] = []
     for job, job_vec, doc in zip(jobs, vectors[1:], documents):
         score = cosine_similarity(resume_vec, job_vec)
-        prompt = _build_reason_prompt(score, candidate_doc, doc, profile)
-        try:
-            reason = generate_korean_text(prompt)
-        except AiProviderError:
-            reason = f"의미 유사도 {score:.2f}"
+        scored.append((score, job, doc))
+    scored.sort(key=lambda item: item[0], reverse=True)
+
+    blurbs = build_job_blurbs([job for _, job, _ in scored[:blurb_top_k]])
+
+    ranked: list[RankedJob] = []
+    for rank_idx, (score, job, doc) in enumerate(scored):
+        blurb = blurbs.get(job.job_posting_url)
+        doc_with_blurb = build_job_document(job, blurb) if blurb else doc
+        if rank_idx < reason_top_k:
+            prompt = _build_reason_prompt(score, candidate_doc, doc_with_blurb, profile)
+            try:
+                reason = generate_korean_text(prompt)
+            except AiProviderError:
+                reason = _score_only_reason(score)
+        else:
+            reason = _score_only_reason(score)
         ranked.append(
             RankedJob(
                 job=job,
@@ -116,5 +136,4 @@ def rank_jobs_semantic(
             )
         )
 
-    ranked.sort(key=lambda r: r.semantic_score or 0.0, reverse=True)
     return ranked, False, used_raw_resume_fallback

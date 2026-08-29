@@ -1,4 +1,4 @@
-from models import ChosenJob, CompanyFactcheck, Job, MvpRunResult, RankedJob, ResumeProfile, LanguageSkill, FieldConfidence
+from models import ChosenJob, Job, MvpRunResult, RankedJob, ResumeProfile, LanguageSkill, FieldConfidence
 
 
 def test_ranked_job_accepts_semantic_fields():
@@ -20,18 +20,6 @@ def test_ranked_job_accepts_semantic_fields():
     assert ranked.url_verified is True
 
 
-def test_company_factcheck_status_literal():
-    fc = CompanyFactcheck(
-        corporate_number="1234567890123",
-        gbiz_fields={"name": "Example KK"},
-        risk_tags=["소규모"],
-        summary_ko="공공 데이터 확인됨",
-        sources=["gBizINFO"],
-        status="verified",
-    )
-    assert fc.status == "verified"
-
-
 def test_mvp_run_result_shape():
     job = Job(
         job_title="PM",
@@ -41,18 +29,9 @@ def test_mvp_run_result_shape():
         job_summary="Lead product",
     )
     chosen = ChosenJob(job=job, selected=True, reason="Best match")
-    fc = CompanyFactcheck(
-        corporate_number=None,
-        gbiz_fields={},
-        risk_tags=[],
-        summary_ko="미확인",
-        sources=[],
-        status="public_unconfirmed",
-    )
     result = MvpRunResult(
         ranked_jobs=[],
         chosen_job=chosen,
-        factcheck=fc,
         used_fallback=False,
     )
     assert result.used_fallback is False
@@ -95,14 +74,6 @@ def test_mvp_run_result_includes_profile_fields():
         resume_profile=None,
         ranked_jobs=[],
         chosen_job=ChosenJob(job=job, selected=True, reason="ok"),
-        factcheck=CompanyFactcheck(
-            corporate_number=None,
-            gbiz_fields={},
-            risk_tags=[],
-            summary_ko="x",
-            sources=[],
-            status="public_unconfirmed",
-        ),
         used_fallback=False,
         used_raw_resume_fallback=True,
     )
