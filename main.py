@@ -25,11 +25,11 @@ AGENT_LIMITS = {
 }
 
 
+from llm_config import crew_llm_model_id
+
+
 def default_crew_llm() -> LLM:
-    model = os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini")
-    if not model.startswith("openai/"):
-        model = f"openai/{model}"
-    return LLM(model=model)
+    return LLM(model=crew_llm_model_id(), api_key=os.getenv("OPENAI_API_KEY"))
 
 
 @CrewBase

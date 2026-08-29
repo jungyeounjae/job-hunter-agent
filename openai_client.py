@@ -4,6 +4,7 @@ from typing import TypeVar
 from openai import OpenAI
 from pydantic import BaseModel
 
+from llm_config import DEFAULT_CHAT_MODEL, DEFAULT_EMBEDDING_MODEL
 from usage_tracker import record_usage
 
 
@@ -25,7 +26,7 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
     if not texts:
         return []
     try:
-        model = os.environ.get("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
+        model = DEFAULT_EMBEDDING_MODEL
         response = _client().embeddings.create(model=model, input=texts)
         record_usage("embeddings", model, response.usage)
         return [list(item.embedding) for item in response.data]
@@ -35,7 +36,7 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
 
 def generate_korean_text(prompt: str) -> str:
     try:
-        model = os.environ.get("OPENAI_CHAT_MODEL", "gpt-4o-mini")
+        model = DEFAULT_CHAT_MODEL
         response = _client().chat.completions.create(
             model=model,
             messages=[{"role": "user", "content": prompt}],
@@ -53,7 +54,7 @@ def generate_korean_text(prompt: str) -> str:
 
 def generate_structured(prompt: str, model_type: type[T]) -> T:
     try:
-        model = os.environ.get("OPENAI_CHAT_MODEL", "gpt-4o-mini")
+        model = DEFAULT_CHAT_MODEL
         response = _client().beta.chat.completions.parse(
             model=model,
             messages=[{"role": "user", "content": prompt}],
